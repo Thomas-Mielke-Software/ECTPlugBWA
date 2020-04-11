@@ -3,7 +3,7 @@
 
 [Setup]
 AppName=ECT BWA Plugin
-AppVerName=ECT BWA Plugin v1.3
+AppVerName=ECT BWA Plugin v1.3 (Vorabversion)
 DiskSpanning=no
 AppPublisher=M. Jahnke
 AppPublisherURL=http://www.easyct.de
@@ -13,8 +13,7 @@ DefaultDirName={pf}\EasyCash&Tax\Plugins\ECTPlugBWA
 UsePreviousAppDir=yes
 DefaultGroupName=EasyCash
 OutputBaseFilename=ECTPlugBWA
-OutputDir=.\Setup   
-SignTool=vs6 
+OutputDir=.\Setup
 SignTool=winsdk81sha1   ; dual sign the 
 SignTool=winsdk81sha256 ; installer
 ;Menu -> Tools -> Configure Sign Tool...
@@ -26,7 +25,7 @@ Name: de; MessagesFile: compiler:Languages\German.isl
 
 [Files]
 Source: ".\BWA.htm"; DestDir: "{app}"; CopyMode: alwaysoverwrite
-Source: ".\button.gif"; DestDir: "{app}"; CopyMode: 
+Source: ".\button.gif"; DestDir: "{app}"; CopyMode: alwaysoverwrite
 
 [Registry]
 Root: HKLM; Subkey: "Software\Tools"; Flags: uninsdeletekeyifempty

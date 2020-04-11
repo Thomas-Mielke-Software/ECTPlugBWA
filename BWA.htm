@@ -53,8 +53,8 @@ InfoText ='EasyCT-BWA Version 1.3\n\n';
 // Beschreibung
 
 InfoText +='In der Kopfzeile unter Bezeichnung können Sie sehen, welcher Zeitraum bei der angezeigten BWA ausgewählt ist. Es wird immer der vorangegangene Monat angezeigt. (z.B. im September der August) Die Ausnahme ist der Januar. Im Januar wird entschieden, im aktuellem Jahr wird der Januar angezeigt und im Vorjahr der Dezember.\n\nFür die Auswertung werden die Feldnummern der EÜR verwendet. Die Namen der Felder werden nicht berücksichtigt. Hier noch eine Aufstellung der Feldnummern zu den Bezeichnungen:\n';
-InfoText +='\nDeutschland\n1112 = Umsatzerlöse\n1100 = Mat./Wareneinkauf\n1103, 1106, 1108 = So. betr. Erlöse\n1120 = Personalkosten\n1217, 1218 = Betriebl. Steuern\n1145 = Versich./ Beiträge\n1280 = Telefon Kosten\n1146, 1147 = Kfz-Kosten\n1130 = Abschreibung\n1110 = Bezogene Leistungen\n1232, 1234 = Zinsaufwand\n1102 = Entnahme von Anlagevermögen\n1194 = Rechts-, und Steuerberatung\n1223 = Beiträge, Gebühren, Abgaben und Versicherungen\n1164, 1165, 1174, 1175 = Geschenke und Bewirtungsaufwendungen\n1150, 1151, 1152 = Raumkosten und Grundstücksaufwendungen\n1177, 1183, 1168 = Sonstige Kosten\n';
-InfoText +='\nÖsterreich\n9040 = Umsatzerlöse\n9100 = Mat./Wareneinkauf\n9050, 9060, 9090 = So. betr. Erlöse\n9110 = Personalkosten\n9217, 9218 = Betriebl. Steuern\n9225 = Versich./ Beiträge\n9230 = Telefon Kosten\n9160, 9170 = Kfz-Kosten\n9130 = Abschreibung\n9120 = Bezogene Leistungen\n9220, 9234 = Zinsaufwand\n9090 = Entnahme von Anlagevermögen\n9130 = Rechts-, und Steuerberatung\n9223, 9224 = Beiträge, Gebühren, Abgaben und Versicherungen\n9200, 9243, 9244, 9245, 9246 = Geschenke und Bewirtungsaufwendungen\n9150, 9180 = Raumkosten und Grundstücksaufwendungen\n9230, 9259 = Sonstige Kosten\n';
+InfoText +='\nDeutschland\n1112 = Umsatzerlöse\n1100 = Mat./Wareneinkauf\n1103, 1106, 1108, 1124 = Sonstige betriebliche Erlöse\n1120 = Personalkosten\n1217, 1218 = Betriebl. Steuern\n1145 = Versich./ Beiträge\n1280 = Telefon Kosten\n1146, 1147, 1144, 1145, 1142, 1176 = Kfz-Kosten\n1130, 1136, 1134 und 1131 = Abschreibung\n1110 = Bezogene Leistungen\n1232, 1234, 1123 = Zinsaufwand\n1102 = Entnahme von Anlagevermögen\n1194 = Rechts-, und Steuerberatung\n1223 = Beiträge, Gebühren, Abgaben und Versicherungen\n1164, 1165, 1174, 1175 = Geschenke und Bewirtungsaufwendungen\n1150, 1151, 1152 = Raumkosten und Grundstücksaufwendungen\n1177, 1183, 1168, 1132, 1221, 1281, 1194, 1222, 1225, 1223, 1228, 1229, 1226, 1227, 1224 = Sonstige Kosten\n';
+InfoText +='\nÖsterreich\n9040 = Umsatzerlöse\n9100 = Mat./Wareneinkauf\n9050, 9060, 9090 = Sonstige betriebliche Erlöse\n9110 = Personalkosten\n9217, 9218 = Betriebl. Steuern\n9225 = Versich./ Beiträge\n9230 = Telefon Kosten\n9160, 9170 = Kfz-Kosten\n9130 = Abschreibung\n9120 = Bezogene Leistungen\n9220, 9234 = Zinsaufwand\n9090 = Entnahme von Anlagevermögen\n9130 = Rechts-, und Steuerberatung\n9223, 9224 = Beiträge, Gebühren, Abgaben und Versicherungen\n9200, 9243, 9244, 9245, 9246 = Geschenke und Bewirtungsaufwendungen\n9150, 9180 = Raumkosten und Grundstücksaufwendungen\n9230, 9259 = Sonstige Kosten\n';
 
 // Die nachfolgende Zeile darf nicht verändert werden!!!!! -- Die Anzeige dieses Info-Textes darf nicht unterdrückt werden!!!!!
 InfoText +='\nKeine Gewähr auf Funktionaliät und Inhalt.\nFehler und Verbesserungsvorschläge bitte im Forum posten.\n\n© 2020 by M. Jahnke\nFreeware-Plugin für EasyCash&Tax © 1998-2020 by Thomas Mielke\nFreie Nutzung und Abänderung und ausschliesslich kostenlose (auch bei Modifikationen!) Weitergabe an Dritte erlaubt.';
@@ -199,20 +199,20 @@ if (steuerland == 1) {			//Österreich
 	var umsatzerloes_konten = new Array('1112');
 	var gesamtleistung_konten = new Array('1112');
 	var warenek_konten = new Array('1100');
-	var sonstigeerloes_konten = new Array('1103', '1106', '1108');
+	var sonstigeerloes_konten = new Array('1103', '1106', '1108', '1124');
 	var personal_konten = new Array('1120');
 	var betsteuern_konten = new Array('1217', '1218');
 	var versicherung_konten = new Array('1145');
 	var besondere_konten = new Array('1280');
-	var kfzkosten_konten = new Array('1146', '1147');
-	var abschreibung_konten = new Array('1130');
+	var kfzkosten_konten = new Array('1146', '1147', '1144', '1145', '1142', '1176');
+	var abschreibung_konten = new Array('1130', '1136', '1134', '1131');
 	var leistungen_konten = new Array('1110');
 	var steuerberatung_konten = new Array('1194');
 	var abgabenundversicherung_konten = new Array('1223');
 	var geschenkeundbewirtung_konten = new Array('1164', '1165', '1174', '1175');
 	var raumundgrundstueck_konten = new Array('1150', '1151', '1152');
-	var soko_konten = new Array('1177', '1168', '1183');
-	var zinsaufwand_konten = new Array('1232', '1234');
+	var soko_konten = new Array('1177', '1168', '1183', '1132', '1221', '1281', '1194', '1222', '1225', '1223', '1228', '1229', '1226', '1227', '1224' );
+	var zinsaufwand_konten = new Array('1232', '1234', '1123');
 	var zinsertrag_konten = new Array('1102');
 }
 
@@ -986,9 +986,9 @@ document.write('<tr>');
 document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
 document.write('</tr>');
 
-// So. betr. Erlöse ausrechnen und anzeigen.
+// Sonstige betriebliche Erlöse ausrechnen und anzeigen.
 document.write('<tr>');
-document.write('<td align=left style="background-color:#ffffff;">So. betr. Erlöse</td>');
+document.write('<td align=left style="background-color:#ffffff;">Sonstige betriebliche Erlöse</td>');
 document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_monat) + '</td>');
 document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_monat_ges_l) + '</td>');
 document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_monat_ges_k) + '</td>');
@@ -1678,9 +1678,9 @@ for (var x = 0; x < betriebe.length; ++x ) {
 	document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
 	document.write('</tr>');
 
-	// So. betr. Erlöse ausrechnen und anzeigen.
+	// Sonstige betriebliche Erlöse ausrechnen und anzeigen.
 	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">So. betr. Erlöse</td>');
+	document.write('<td align=left style="background-color:#ffffff;">Sonstige betriebliche Erlöse</td>');
 	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_monat) + '</td>');
 	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_monat_ges_l) + '</td>');
 	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_monat_ges_k) + '</td>');
