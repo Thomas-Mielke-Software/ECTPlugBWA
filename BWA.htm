@@ -1,0 +1,1694 @@
+<html>
+<head>
+</script>
+<style type="text/css">
+   { font-family:verdana, sans-serif; font-size: 14px; font-weight: bold; text-decoration: underline; }
+  a { cursor:hand; color: #000099;}
+  a:hover {  color: #990000; font-weight: bold; }
+  h2 { font-family:verdana, sans-serif; font-size: 12px; font-weight: bold; text-decoration: underline; }
+  td { font-family:verdana, sans-serif; font-size: 8px; font-weight: bold; border-color: #000000; border-width: 1px; }
+</style>
+</head>
+<body marginwidth="0" marginheight="0" topmargin="0" bottommargin="0" leftmargin="0" rightmargin="0" bgcolor="#FFFFFF" font color="#000000">
+<script language="JavaScript" type="text/javascript"> <!--
+
+// © 2015 by Markus Jahnke
+
+//************************************** Deklaration ***********************************************************
+
+var myECTdok = null;
+var dokID = null;
+var myECTbuch = null;
+var myECTeinst = null;
+var myECTform = null;
+
+myECTdok = document.createElement("OBJECT");
+myECTdok.classid = "CLSID:ED09076F-B744-47A1-8D60-F9EF093F19F0";
+
+if (window.location.search.charAt(0) == '?') {	// Dokument-ID wurde als Parameter in der URL übergeben
+  dokID = window.location.search.substring(1, window.location.search.length);
+  myECTdok.ID = dokID;
+}
+
+myECTbuch = document.createElement("OBJECT");
+myECTbuch.classid = "CLSID:3BC20630-93BA-47B2-82D1-820C7F1986A1";
+
+myECTeinst = document.createElement("OBJECT");
+myECTeinst.classid = "CLSID:DFA091A6-D040-444F-800A-656BEA3361C3";
+
+myECTform = document.createElement("OBJECT");
+myECTform.classid = "CLSID:DFA091A6-D040-444F-800A-656BEA3361C4";
+
+// Wenn die Informationen erwünscht sind einfach mit true aktivieren
+var show_betriebe = false;
+var show_erloeskonten = false;
+var show_ausgabenkonten = false;
+var show_summe_einnamen = false;
+var show_summe_ausgaben = false;
+
+// © 2015 by Markus Jahnke
+
+InfoText ='EasyCT-BWA Version 1.2\n\n';
+
+// Beschreibung
+
+InfoText +='In der Kopfzeile unter Bezeichnung können Sie sehen, welcher Zeitraum bei der angezeigten BWA ausgewählt ist. Es wird immer der vorangegangene Monat angezeigt. (z.B. im September der August) Die Ausnahme ist der Januar. Im Januar wird entschieden, im aktuellem Jahr wird der Januar angezeigt und im Vorjahr der Dezember.\n\nFür die Auswertung werden die Feldnummern der EÜR verwendet. Die Namen der Felder werden nicht berücksichtigt. Hier noch eine Aufstellung der Feldnummern zu den Bezeichnungen:\n';
+InfoText +='\n1112 = Umsatzerlöse\n1100 = Mat./Wareneinkauf\n1103, 1106, 1108 = So. betr. Erlöse\n1120 = Personalkosten\n1217, 1218 = Betriebl. Steuern\n1145 = Versich./ Beiträge\n1280 = Telefon Kosten\n1146, 1147 = Kfz-Kosten\n1130 = Abschreibung\n1110 = Bezogene Leistungen\n1232 = Zinsaufwand\n1102 = Entnahme von Anlagevermögen\n1194 = Rechts-, und Steuerberatung\n1223 = Beiträge, Gebühren, Abgaben und Versicherungen\n1164, 1165, 1174, 1175 = Geschenke und Bewirtungsaufwendungen\n1150, 1151, 1152 = Raumkosten und Grundst&uuml;cksaufwendungen\n1177, 1183, 1168 = Sonstige Kosten\n';
+
+// Die nachfolgende Zeile darf nicht verändert werden!!!!! -- Die Anzeige dieses Info-Textes darf nicht unterdrückt werden!!!!!
+InfoText +='\nKeine Gewähr auf Funktionaliät und Inhalt.\nFehler und Verbesserungsvorschläge bitte im Forum posten.\n\n© 2015 by M. Jahnke\nFreeware-Plugin für EasyCash&Tax © 1998-2011 by Thomas Mielke\nFreie Nutzung und Abänderung und ausschliesslich kostenlose (auch bei Modifikationen!) Weitergabe an Dritte erlaubt.';
+
+//************************************** Funktionen ********************************************************************
+
+
+// Beträge in deutsches Standard-Währungsformat umwandeln
+function currency(x) {
+	if (isNaN(x) || !isFinite(x)) {
+		x=0;
+	}
+	y=Math.round(x*100)/100+'';
+	dec =false;
+
+	for(idx=1;idx<=y.length;idx++) {
+		if(y.substr(idx,1) == '.') {
+			l_euro= idx;
+			l_cent = y.length-l_euro-1;
+			dec =true;
+		}
+		if (dec == false) { l_euro=y.length; l_cent = 0; }
+	}
+	switch (l_cent) {
+		case 0: cent='00'; break;
+		case 1: cent= y.substr(y.length-1,1)+'0'; break;
+		default: cent= y.substr(y.length-2,2);
+	}
+
+	euro_raw = y.substr(0,l_euro);
+	//ersten Block ermitteln
+	euro = euro_raw.substr(0, euro_raw.length-(Math.floor(euro_raw.length/3)*3));
+	euro_raw = euro_raw.substr(euro_raw.length-(Math.floor(euro_raw.length/3)*3), Math.floor(euro_raw.length/3)*3);
+	if (euro_raw != '' && euro != '' && euro != '-') euro +='.';
+	// nun die 3er-Blöcke mit Punkten in euro schreiben
+	while (euro_raw !=''){
+		euro += euro_raw.substr(0,3);
+		euro_raw = euro_raw.substr(3,euro_raw.length);
+		if (euro_raw != '') euro +='.';
+	}
+	result=euro + ',' + cent;
+	return result;
+}
+
+// Datum in englischen Standard (2007-12-31) umwandeln
+function date_engl(x) {
+	var Datum = new Date(x);
+	var Jahr = Datum.getYear();
+	newdate = Jahr + '-';
+	var Monat = Datum.getMonth()+1;
+	if (Monat <= 9) newdate+='0'+Monat+'-'; else newdate+=Monat+'-';
+	var Tag = Datum.getDate();
+	if (Tag <= 9) newdate+='0'+Tag; else newdate+=Tag;
+	return newdate;
+}
+
+// Datum in deutschen Standard (31.12.2007) umwandeln
+function date_ger(x) {
+	var Datum = new Date(x);
+	var Tag = Datum.getDate();
+	if (Tag <= 9) newdate='0'+Tag+'.'; else newdate=Tag+'.';
+	var Monat = Datum.getMonth()+1;
+	if (Monat <= 9) newdate+='0'+Monat+'.'; else newdate+=Monat+'.';
+	var Jahr = Datum.getYear();
+	newdate += Jahr;
+	return newdate;
+}
+
+// Aktuellen Monat zurückgeben
+function date_month(x) {
+	var Datum = new Date(x);
+	var Monat = Datum.getMonth()+1;
+	newdate = Monat;
+	return newdate;
+}
+
+// Aktuellen Monat zurückgeben
+var ArrayMonatText = new Array();
+ArrayMonatText[0]="NIX";
+ArrayMonatText[1]="Jan";
+ArrayMonatText[2]="Feb";
+ArrayMonatText[3]="M&auml;";
+ArrayMonatText[4]="Apr";
+ArrayMonatText[5]="Mai";
+ArrayMonatText[6]="Jun";
+ArrayMonatText[7]="Jul";
+ArrayMonatText[8]="Aug";
+ArrayMonatText[9]="Sep";
+ArrayMonatText[10]="Okt";
+ArrayMonatText[11]="Nov";
+ArrayMonatText[12]="Dez";
+
+function MonatText(Zahl) {
+	return ArrayMonatText[Zahl];
+}
+
+var DatumAktuell = new Date();
+var MonatAktuell = DatumAktuell.getMonth();
+var JahrAktuell = DatumAktuell.getYear();
+// Hier wird der Monat bestimmt, der Angezeigt werden soll:
+// im Januar = bei Vorjahr Dezember und bei Aktuellem Jahr Januar, im Februar = Januar usw.
+if (myECTdok.Jahr < JahrAktuell) {
+	MonatAktuell = 12;
+} else if (myECTdok.Jahr == JahrAktuell && MonatAktuell == 0) {
+	MonatAktuell = MonatAktuell+1;
+} else {
+	MonatAktuell = MonatAktuell;
+}
+var MonatName = "";
+MonatName = MonatText(MonatAktuell);
+
+//************************************** Daten Einlesen *************************************************************
+
+// wenn vorhanden, Betriebe einlesen
+if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
+	var zaehler1 = 0;
+	var zaehler2 = 0;
+	var anzbetriebe = 0;
+	var betriebname = '';
+	var betriebunternehmensart = '';
+	var betriebe = new Array();
+	
+	betriebname = "[Betriebe]Betrieb" + zaehler1 + zaehler2 + "Name";
+	betriebunternehmensart = "[Betriebe]Betrieb" + zaehler1 + zaehler2 + "Unternehmensart";
+	
+	while (myECTeinst.HoleEinstellung(betriebname) != '') {
+		var Unternehmensart = '';
+		Unternehmensart = myECTeinst.HoleEinstellung(betriebunternehmensart);
+		var myUnternehmensart = Unternehmensart.split("	");
+		
+		betriebe[anzbetriebe] = new Object();
+		betriebe[anzbetriebe]["Name"] = myECTeinst.HoleEinstellung(betriebname);
+		betriebe[anzbetriebe]["Unternehmensart"] = myUnternehmensart[0];
+		betriebe[anzbetriebe]["Rechtsform"] = myUnternehmensart[1];
+		betriebe[anzbetriebe]["Betriebssteuernr"] = myUnternehmensart[2];
+		
+		if (zaehler2 == 9) {
+			zaehler1++;
+			zaehler2 = 0;
+		} else {
+			zaehler2++;
+		}
+		anzbetriebe++;
+		betriebname = "[Betriebe]Betrieb" + zaehler1 + zaehler2 + "Name";
+		betriebunternehmensart = "[Betriebe]Betrieb" + zaehler1 + zaehler2 + "Unternehmensart";
+	}
+
+	if (show_betriebe) {
+		document.write('Es wurden ' + betriebe.length + ' Betriebe gefunden:<br>');
+		for (var i = 0; i < betriebe.length; ++i ) {
+			document.write('<br>');
+			document.write('Betrieb: ' + betriebe[i]["Name"] + '<br>');
+			document.write('Unternehmensart: ' + betriebe[i]["Unternehmensart"] + '<br>');
+			document.write('Rechtsform: ' + betriebe[i]["Rechtsform"] + '<br>');
+			document.write('Betriebssteuernr.: ' + betriebe[i]["Betriebssteuernr"] + '<br>');
+		}
+	}
+}
+
+// vorhandene, Erlöskonten einlesen
+if (myECTeinst.HoleEinstellung("[EinnahmenRechnungsposten]00") != '') {
+	var zaehler1 = 0;
+	var zaehler2 = 0;
+	var anzalerloeskonten = 0;
+	var einnahmenrechnungsposten = '';
+	var einnahmenfeldzuweisungen = '';
+	var erloeskonten = new Array();
+	
+	einnahmenrechnungsposten = "[EinnahmenRechnungsposten]" + zaehler1 + zaehler2;
+	einnahmenfeldzuweisungen = "[EinnahmenFeldzuweisungen]" + zaehler1 + zaehler2;
+	
+	while (myECTeinst.HoleEinstellung(einnahmenrechnungsposten) != '') {
+		var Erloeskonto = '';
+		Erloeskonto = myECTeinst.HoleEinstellung(einnahmenfeldzuweisungen);
+		var myErloeskonto = Erloeskonto.split("|");
+		var my2Erloeskonto = myErloeskonto[1].split("=");
+
+		erloeskonten[anzalerloeskonten] = new Object();
+		erloeskonten[anzalerloeskonten]["EinRech"] = myECTeinst.HoleEinstellung(einnahmenrechnungsposten);
+		erloeskonten[anzalerloeskonten]["EinFeld"] = my2Erloeskonto[1];
+		erloeskonten[anzalerloeskonten]["Netto_Gesamt"] = 0;
+		erloeskonten[anzalerloeskonten]["Netto_Monat"] = 0;
+
+		var neugesamt = '';
+		var neumonat = '';
+		if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
+			for (var x = 0; x < betriebe.length; ++x ) {
+				neugesamt = "Netto_Gesamt_"+betriebe[x]["Name"];
+				neumonat = "Netto_Monat_"+betriebe[x]["Name"];
+				erloeskonten[anzalerloeskonten][neugesamt] = 0;
+				erloeskonten[anzalerloeskonten][neumonat] = 0;
+			}
+		}
+
+		if (zaehler2 == 9) {
+			zaehler1++;
+			zaehler2 = 0;
+		} else {
+			zaehler2++;
+		}
+		anzalerloeskonten++;
+		einnahmenrechnungsposten = "[EinnahmenRechnungsposten]" + zaehler1 + zaehler2;
+		einnahmenfeldzuweisungen = "[EinnahmenFeldzuweisungen]" + zaehler1 + zaehler2;
+	}
+
+	if (show_erloeskonten) {
+		document.write('<br><br>Es wurden ' + erloeskonten.length + ' Erlöskonten gefunden:<br>');
+		for (var i = 0; i < erloeskonten.length; ++i ) {
+			document.write('<br>');
+			document.write('Bezeichnung: ' + erloeskonten[i]["EinRech"] + '<br>');
+			document.write('Feldzuweisung: ' + erloeskonten[i]["EinFeld"] + '<br>');
+			document.write('Netto_Gesamt: ' + erloeskonten[i]["Netto_Gesamt"] + '<br>');
+			document.write('Netto_Monat: ' + erloeskonten[i]["Netto_Monat"] + '<br>');
+			var neugesamt = '';
+			var neumonat = '';
+			if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
+				for (var x = 0; x < betriebe.length; ++x ) {
+					neugesamt = "Netto_Gesamt_"+betriebe[x]["Name"];
+					neumonat = "Netto_Monat_"+betriebe[x]["Name"];
+					document.write(neugesamt+': ' + erloeskonten[i][neugesamt] + '<br>');
+					document.write(neumonat+': ' + erloeskonten[i][neumonat] + '<br>');
+				}
+			}
+
+		}
+	}
+}
+
+
+// vorhandene, Ausgabenkonten einlesen
+if (myECTeinst.HoleEinstellung("[AusgabenRechnungsposten]00") != '') {
+	var zaehler1 = 0;
+	var zaehler2 = 0;
+	var anzalausgabenkonten = 0;
+	var ausgabenrechnungsposten = '';
+	var ausgabenfeldzuweisungen = '';
+	var ausgabenkonten = new Array();
+	
+	ausgabenrechnungsposten = "[AusgabenRechnungsposten]" + zaehler1 + zaehler2;
+	ausgabenfeldzuweisungen = "[AusgabenFeldzuweisungen]" + zaehler1 + zaehler2;
+	
+	while (myECTeinst.HoleEinstellung(ausgabenrechnungsposten) != '') {
+		var Ausgabenkonto = '';
+		Ausgabenkonto = myECTeinst.HoleEinstellung(ausgabenfeldzuweisungen);
+		var myAusgabenkonto = Ausgabenkonto.split("|");
+		var my2Ausgabenkonto = myAusgabenkonto[1].split("=");
+
+		ausgabenkonten[anzalausgabenkonten] = new Object();
+		ausgabenkonten[anzalausgabenkonten]["AusRech"] = myECTeinst.HoleEinstellung(ausgabenrechnungsposten);
+		ausgabenkonten[anzalausgabenkonten]["AusFeld"] = my2Ausgabenkonto[1];
+		ausgabenkonten[anzalausgabenkonten]["Netto_Gesamt"] = 0;
+		ausgabenkonten[anzalausgabenkonten]["Netto_Monat"] = 0;
+		var neugesamt = '';
+		var neumonat = '';
+		if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
+			for (var x = 0; x < betriebe.length; ++x ) {
+				neugesamt = "Netto_Gesamt_"+betriebe[x]["Name"];
+				neumonat = "Netto_Monat_"+betriebe[x]["Name"];
+				ausgabenkonten[anzalausgabenkonten][neugesamt] = 0;
+				ausgabenkonten[anzalausgabenkonten][neumonat] = 0;
+			}
+		}
+		if (zaehler2 == 9) {
+			zaehler1++;
+			zaehler2 = 0;
+		} else {
+			zaehler2++;
+		}
+		anzalausgabenkonten++;
+		ausgabenrechnungsposten = "[AusgabenRechnungsposten]" + zaehler1 + zaehler2;
+		ausgabenfeldzuweisungen = "[AusgabenFeldzuweisungen]" + zaehler1 + zaehler2;
+	}
+
+	if (show_ausgabenkonten) {
+		document.write('<br><br>Es wurden ' + ausgabenkonten.length + ' Ausgabenkonten gefunden:<br>');
+		for (var i = 0; i < ausgabenkonten.length; ++i ) {
+			document.write('<br>');
+			document.write('Bezeichnung: ' + ausgabenkonten[i]["AusRech"] + '<br>');
+			document.write('Feldzuweisung: ' + ausgabenkonten[i]["AusFeld"] + '<br>');
+			document.write('Netto_Gesamt: ' + ausgabenkonten[i]["Netto_Gesamt"] + '<br>');
+			document.write('Netto_Monat: ' + ausgabenkonten[i]["Netto_Monat"] + '<br>');
+			var neugesamt = '';
+			var neumonat = '';
+			if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
+				for (var x = 0; x < betriebe.length; ++x ) {
+					neugesamt = "Netto_Gesamt_"+betriebe[x]["Name"];
+					neumonat = "Netto_Monat_"+betriebe[x]["Name"];
+					document.write(neugesamt+': ' + ausgabenkonten[i][neugesamt] + '<br>');
+					document.write(neumonat+': ' + ausgabenkonten[i][neumonat] + '<br>');
+				}
+			}
+		}
+	}
+}
+
+// Alle Einnamen Buchungen einlesen
+myECTbuch.ID = myECTdok.FindeErsteEinnahmenBuchung()
+var datumstr;
+if (myECTbuch.ID)
+{
+	do {
+		for (var i = 0; i < erloeskonten.length; ++i ) {
+			if (erloeskonten[i]["EinRech"] == myECTbuch.Konto) {
+				erloeskonten[i]["Netto_Gesamt"] = erloeskonten[i]["Netto_Gesamt"] + Math.round(myECTbuch.HoleNetto()*100)/100;
+				if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
+					for (var x = 0; x < betriebe.length; ++x ) {
+						neugesamt = "Netto_Gesamt_"+betriebe[x]["Name"];
+						if (myECTbuch.Betrieb == betriebe[x]["Name"]) {
+							erloeskonten[i][neugesamt] = erloeskonten[i][neugesamt] + Math.round(myECTbuch.HoleNetto()*100)/100;
+						}
+					}
+				}
+				
+				var datumstr = '';
+				datumstr = date_month(myECTbuch.Datum);
+				if (datumstr == MonatAktuell) {
+					erloeskonten[i]["Netto_Monat"] = erloeskonten[i]["Netto_Monat"] + Math.round(myECTbuch.HoleNetto()*100)/100;
+					if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
+						for (var x = 0; x < betriebe.length; ++x ) {
+							neumonat = "Netto_Monat_"+betriebe[x]["Name"];
+							if (myECTbuch.Betrieb == betriebe[x]["Name"]) {
+								erloeskonten[i][neumonat] = erloeskonten[i][neumonat] + Math.round(myECTbuch.HoleNetto()*100)/100;
+							}
+						}
+					}
+				}
+			}
+		}
+	} while (myECTbuch.ID = myECTdok.FindeNaechsteBuchung(myECTbuch.ID));
+}
+
+// Alle Ausgaben Buchungen einlesen
+myECTbuch.ID = myECTdok.FindeErsteAusgabenBuchung()
+if (myECTbuch.ID)
+{
+	do {
+		var neugesamt = '';
+		for (var i = 0; i < ausgabenkonten.length; ++i ) {
+			if (ausgabenkonten[i]["AusRech"] == myECTbuch.Konto) {
+				ausgabenkonten[i]["Netto_Gesamt"] = ausgabenkonten[i]["Netto_Gesamt"] + Math.round(myECTbuch.HoleBuchungsjahrNetto(dokID)*100)/100;
+				if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
+					for (var x = 0; x < betriebe.length; ++x ) {
+						neugesamt = "Netto_Gesamt_"+betriebe[x]["Name"];
+						if (myECTbuch.Betrieb == betriebe[x]["Name"]) {
+							ausgabenkonten[i][neugesamt] = ausgabenkonten[i][neugesamt] + Math.round(myECTbuch.HoleBuchungsjahrNetto(dokID)*100)/100;
+						}
+					}
+				}
+
+				var datumstr = '';
+				datumstr = date_month(myECTbuch.Datum);
+				if (datumstr == MonatAktuell) {
+					ausgabenkonten[i]["Netto_Monat"] = ausgabenkonten[i]["Netto_Monat"] + Math.round(myECTbuch.HoleBuchungsjahrNetto(dokID)*100)/100;
+					if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
+						for (var x = 0; x < betriebe.length; ++x ) {
+							neumonat = "Netto_Monat_"+betriebe[x]["Name"];
+							if (myECTbuch.Betrieb == betriebe[x]["Name"]) {
+								ausgabenkonten[i][neumonat] = ausgabenkonten[i][neumonat] + Math.round(myECTbuch.HoleBuchungsjahrNetto(dokID)*100)/100;
+							}
+						}
+					}
+				}
+				
+				
+			}
+		}
+	} while (myECTbuch.ID = myECTdok.FindeNaechsteBuchung(myECTbuch.ID));
+}
+
+if (show_summe_einnamen) {
+	document.write('<br>Summen Einnamen Netto: <br>');
+	var eingesamt = 0;
+	for (var i = 0; i < erloeskonten.length; ++i ) {
+		if (erloeskonten[i]["Netto_Gesamt"] != 0) {
+			eingesamt = eingesamt + erloeskonten[i]["Netto_Gesamt"];
+			document.write('Feld: ' + erloeskonten[i]["EinFeld"] + '&nbsp;&nbsp;&nbsp;&nbsp;Summe: ' + currency(erloeskonten[i]["Netto_Gesamt"]) + '<br>');
+		}
+	}
+	document.write('Einnamen gesamt = ' + currency(eingesamt) + '<br><br>');
+}
+
+if (show_summe_ausgaben) {
+	document.write('Summen Ausgaben Netto: <br>');
+	var ausgesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["Netto_Gesamt"] != 0) {
+			ausgesamt = ausgesamt + ausgabenkonten[i]["Netto_Gesamt"];
+			document.write('Feld: ' + ausgabenkonten[i]["AusFeld"] + '&nbsp;&nbsp;&nbsp;&nbsp;Summe: ' + currency(ausgabenkonten[i]["Netto_Gesamt"]) + '<br>');
+		}
+	}
+	document.write('Ausgaben gesamt = ' + currency(ausgesamt) + '<br><br><br>');
+}
+	
+
+
+//************************************** Ausgabe ********************************************************************
+var umsatzerloes_monat = 0;
+var umsatzerloes_gesamt = 0;
+for (var i = 0; i < erloeskonten.length; ++i ) {
+	if (erloeskonten[i]["EinFeld"] == 1112) {
+		umsatzerloes_monat = umsatzerloes_monat + erloeskonten[i]["Netto_Monat"];
+		umsatzerloes_gesamt = umsatzerloes_gesamt + erloeskonten[i]["Netto_Gesamt"];
+	}
+}
+
+var monatleistung = 0;
+var gesamtleistung = 0;
+for (var i = 0; i < erloeskonten.length; ++i ) {
+	if (erloeskonten[i]["EinFeld"] == 1112) {
+		monatleistung = monatleistung + erloeskonten[i]["Netto_Monat"];
+		gesamtleistung = gesamtleistung + erloeskonten[i]["Netto_Gesamt"];
+	}
+}
+
+var warenek_monat = 0;
+var warenek_gesamt = 0;
+for (var i = 0; i < ausgabenkonten.length; ++i ) {
+	if (ausgabenkonten[i]["AusFeld"] == 1100) {
+		warenek_monat = warenek_monat + ausgabenkonten[i]["Netto_Monat"];
+		warenek_gesamt = warenek_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	}
+}
+
+var roh_monat = 0;
+var roh_gesamt = 0;
+roh_monat = monatleistung - warenek_monat;
+roh_gesamt = gesamtleistung - warenek_gesamt;
+
+var sonstigeerloes_monat = 0;
+var sonstigeerloes_gesamt = 0;
+for (var i = 0; i < erloeskonten.length; ++i ) {
+	if (erloeskonten[i]["EinFeld"] == 1103 || erloeskonten[i]["EinFeld"] == 1106 || erloeskonten[i]["EinFeld"] == 1108) {
+		sonstigeerloes_monat = sonstigeerloes_monat + erloeskonten[i]["Netto_Monat"];
+		sonstigeerloes_gesamt = sonstigeerloes_gesamt + erloeskonten[i]["Netto_Gesamt"];
+	}
+}
+
+var bet_rohertrag_monat = 0;
+var bet_rohertrag_gesamt = 0;
+bet_rohertrag_monat = roh_monat + sonstigeerloes_monat;
+bet_rohertrag_gesamt = roh_gesamt + sonstigeerloes_gesamt;
+
+var personal_monat = 0;
+var personal_gesamt = 0;
+for (var i = 0; i < ausgabenkonten.length; ++i ) {
+	if (ausgabenkonten[i]["AusFeld"] == 1120) {
+		personal_monat = personal_monat + ausgabenkonten[i]["Netto_Monat"];
+		personal_gesamt = personal_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	}
+}
+
+var betsteuern_monat = 0;
+var betsteuern_gesamt = 0;
+for (var i = 0; i < ausgabenkonten.length; ++i ) {
+	if (ausgabenkonten[i]["AusFeld"] == 1217 || ausgabenkonten[i]["AusFeld"] == 1218) {
+		betsteuern_monat = betsteuern_monat + ausgabenkonten[i]["Netto_Monat"];
+		betsteuern_gesamt = betsteuern_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	}
+}
+
+var versicherung_monat = 0;
+var versicherung_gesamt = 0;
+for (var i = 0; i < ausgabenkonten.length; ++i ) {
+	if (ausgabenkonten[i]["AusFeld"] == 1145) {
+		versicherung_monat = versicherung_monat + ausgabenkonten[i]["Netto_Monat"];
+		versicherung_gesamt = versicherung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	}
+}
+
+var besondere_monat = 0;
+var besondere_gesamt = 0;
+for (var i = 0; i < ausgabenkonten.length; ++i ) {
+	if (ausgabenkonten[i]["AusFeld"] == 1280) {
+		besondere_monat = besondere_monat + ausgabenkonten[i]["Netto_Monat"];
+		besondere_gesamt = besondere_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	}
+}
+
+var kfzkosten_monat = 0;
+var kfzkosten_gesamt = 0;
+for (var i = 0; i < ausgabenkonten.length; ++i ) {
+	if (ausgabenkonten[i]["AusFeld"] == 1146 || ausgabenkonten[i]["AusFeld"] == 1147) {
+		kfzkosten_monat = kfzkosten_monat + ausgabenkonten[i]["Netto_Monat"];
+		kfzkosten_gesamt = kfzkosten_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	}
+}
+
+var abschreibung_monat = 0;
+var abschreibung_gesamt = 0;
+for (var i = 0; i < ausgabenkonten.length; ++i ) {
+	if (ausgabenkonten[i]["AusFeld"] == 1130) {
+		abschreibung_monat = abschreibung_monat + ausgabenkonten[i]["Netto_Monat"];
+		abschreibung_gesamt = abschreibung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	}
+}
+
+var leistungen_monat = 0;
+var leistungen_gesamt = 0;
+for (var i = 0; i < ausgabenkonten.length; ++i ) {
+	if (ausgabenkonten[i]["AusFeld"] == 1110) {
+		leistungen_monat = leistungen_monat + ausgabenkonten[i]["Netto_Monat"];
+		leistungen_gesamt = leistungen_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	}
+}
+
+var steuerberatung_monat = 0;
+var steuerberatung_gesamt = 0;
+for (var i = 0; i < ausgabenkonten.length; ++i ) {
+	if (ausgabenkonten[i]["AusFeld"] == 1194) {
+		steuerberatung_monat = steuerberatung_monat + ausgabenkonten[i]["Netto_Monat"];
+		steuerberatung_gesamt = steuerberatung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	}
+}
+
+var abgabenundversicherung_monat = 0;
+var abgabenundversicherung_gesamt = 0;
+for (var i = 0; i < ausgabenkonten.length; ++i ) {
+	if (ausgabenkonten[i]["AusFeld"] == 1223) {
+		abgabenundversicherung_monat = abgabenundversicherung_monat + ausgabenkonten[i]["Netto_Monat"];
+		abgabenundversicherung_gesamt = abgabenundversicherung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	}
+}
+
+var geschenkeundbewirtung_monat = 0;
+var geschenkeundbewirtung_gesamt = 0;
+for (var i = 0; i < ausgabenkonten.length; ++i ) {
+	if (ausgabenkonten[i]["AusFeld"] == 1164 || ausgabenkonten[i]["AusFeld"] == 1165 || ausgabenkonten[i]["AusFeld"] == 1174 || ausgabenkonten[i]["AusFeld"] == 1175) {
+		geschenkeundbewirtung_monat = geschenkeundbewirtung_monat + ausgabenkonten[i]["Netto_Monat"];
+		geschenkeundbewirtung_gesamt = geschenkeundbewirtung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	}
+}
+
+var raumundgrundstueck_monat = 0;
+var raumundgrundstueck_gesamt = 0;
+for (var i = 0; i < ausgabenkonten.length; ++i ) {
+	if (ausgabenkonten[i]["AusFeld"] == 1150 || ausgabenkonten[i]["AusFeld"] == 1151 || ausgabenkonten[i]["AusFeld"] == 1152) {
+		raumundgrundstueck_monat = raumundgrundstueck_monat + ausgabenkonten[i]["Netto_Monat"];
+		raumundgrundstueck_gesamt = raumundgrundstueck_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	}
+}
+
+var soko_monat = 0;
+var soko_gesamt = 0;
+for (var i = 0; i < ausgabenkonten.length; ++i ) {
+	if (ausgabenkonten[i]["AusFeld"] == 1177 || ausgabenkonten[i]["AusFeld"] == 1168 || ausgabenkonten[i]["AusFeld"] == 1183) {
+		soko_monat = soko_monat + ausgabenkonten[i]["Netto_Monat"];
+		soko_gesamt = soko_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	}
+}
+
+var gesamtkosten_monat = 0;
+var gesamtkosten_gesamt = 0;
+gesamtkosten_monat = personal_monat + betsteuern_monat + versicherung_monat + besondere_monat + kfzkosten_monat + abschreibung_monat + leistungen_monat + abgabenundversicherung_monat + geschenkeundbewirtung_monat + raumundgrundstueck_monat + soko_monat;
+gesamtkosten_gesamt = personal_gesamt + betsteuern_gesamt + versicherung_gesamt + besondere_gesamt + kfzkosten_gesamt + abschreibung_gesamt + leistungen_gesamt + abgabenundversicherung_gesamt + geschenkeundbewirtung_gesamt + raumundgrundstueck_gesamt + soko_gesamt;
+
+var betriebsergebnis_monat = 0;
+var betriebsergebnis_gesamt = 0;
+betriebsergebnis_monat = bet_rohertrag_monat - gesamtkosten_monat;
+betriebsergebnis_gesamt = bet_rohertrag_gesamt - gesamtkosten_gesamt;
+
+var zinsaufwand_monat = 0;
+var zinsaufwand_gesamt = 0;
+for (var i = 0; i < ausgabenkonten.length; ++i ) {
+	if (ausgabenkonten[i]["AusFeld"] == 1232 || ausgabenkonten[i]["AusFeld"] == 1234) {
+		zinsaufwand_monat = zinsaufwand_monat + ausgabenkonten[i]["Netto_Monat"];
+		zinsaufwand_gesamt = zinsaufwand_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	}
+}
+
+var zinsertrag_monat = 0;
+var zinsertrag_gesamt = 0;
+for (var i = 0; i < erloeskonten.length; ++i ) {
+	if (erloeskonten[i]["EinFeld"] == 1102) {
+		zinsertrag_monat = zinsertrag_monat + erloeskonten[i]["Netto_Monat"];
+		zinsertrag_gesamt = zinsertrag_gesamt + erloeskonten[i]["Netto_Gesamt"];
+	}
+}
+
+var vorergebnis_monat = 0;
+var vorergebnis_gesamt = 0;
+vorergebnis_monat = betriebsergebnis_monat + zinsertrag_monat - zinsaufwand_monat;
+vorergebnis_gesamt = betriebsergebnis_gesamt + zinsertrag_gesamt - zinsaufwand_gesamt;
+
+var monatleistung_ges_l = 100;
+var gesamtleistung_ges_l = 100;
+
+var umsatzerloes_monat_ges_l = 100;
+var umsatzerloes_gesamt_ges_l = 100;
+
+var gesamtkosten_monat_ges_k = 100;
+var gesamtkosten_gesamt_ges_k = 100;
+
+var warenek_monat_ges_l = (warenek_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var warenek_gesamt_ges_l = (warenek_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var roh_monat_ges_l = (roh_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var roh_gesamt_ges_l = (roh_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var sonstigeerloes_monat_ges_l = (sonstigeerloes_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var sonstigeerloes_gesamt_ges_l = (sonstigeerloes_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var bet_rohertrag_monat_ges_l = roh_monat_ges_l + sonstigeerloes_monat_ges_l;
+var bet_rohertrag_gesamt_ges_l = roh_gesamt_ges_l + sonstigeerloes_gesamt_ges_l;
+
+var personal_monat_ges_l = (personal_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var personal_gesamt_ges_l = (personal_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var betsteuern_monat_ges_l = (betsteuern_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var betsteuern_gesamt_ges_l = (betsteuern_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var versicherung_monat_ges_l = (versicherung_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var versicherung_gesamt_ges_l = (versicherung_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var besondere_monat_ges_l = (besondere_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var besondere_gesamt_ges_l = (besondere_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var kfzkosten_monat_ges_l = (kfzkosten_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var kfzkosten_gesamt_ges_l = (kfzkosten_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var abschreibung_monat_ges_l = (abschreibung_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var abschreibung_gesamt_ges_l = (abschreibung_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var leistungen_monat_ges_l = (leistungen_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var leistungen_gesamt_ges_l = (leistungen_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var steuerberatung_monat_ges_l = (steuerberatung_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var steuerberatung_gesamt_ges_l = (steuerberatung_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var abgabenundversicherung_monat_ges_l = (abgabenundversicherung_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var abgabenundversicherung_gesamt_ges_l = (abgabenundversicherung_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var geschenkeundbewirtung_monat_ges_l = (geschenkeundbewirtung_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var geschenkeundbewirtung_gesamt_ges_l = (geschenkeundbewirtung_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var raumundgrundstueck_monat_ges_l = (raumundgrundstueck_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var raumundgrundstueck_gesamt_ges_l = (raumundgrundstueck_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var soko_monat_ges_l = (soko_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var soko_gesamt_ges_l = (soko_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var gesamtkosten_monat_ges_l = (gesamtkosten_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var gesamtkosten_gesamt_ges_l = (gesamtkosten_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var betriebsergebnis_monat_ges_l = (betriebsergebnis_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var betriebsergebnis_gesamt_ges_l = (betriebsergebnis_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var zinsaufwand_monat_ges_l = (zinsaufwand_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var zinsaufwand_gesamt_ges_l = (zinsaufwand_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var zinsertrag_monat_ges_l = (zinsertrag_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var zinsertrag_gesamt_ges_l = (zinsertrag_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var vorergebnis_monat_ges_l = (vorergebnis_monat * monatleistung_ges_l) / umsatzerloes_monat;
+var vorergebnis_gesamt_ges_l = (vorergebnis_gesamt * gesamtleistung_ges_l) / umsatzerloes_gesamt;
+
+var monatleistung_ges_k = (monatleistung * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var gesamtleistung_ges_k = (gesamtleistung * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var warenek_monat_ges_k = (warenek_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var warenek_gesamt_ges_k = (warenek_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var roh_monat_ges_k = (roh_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var roh_gesamt_ges_k = (roh_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var sonstigeerloes_monat_ges_k = (sonstigeerloes_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var sonstigeerloes_gesamt_ges_k = (sonstigeerloes_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var bet_rohertrag_monat_ges_k = (bet_rohertrag_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var bet_rohertrag_gesamt_ges_k = (bet_rohertrag_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var personal_monat_ges_k = (personal_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var personal_gesamt_ges_k = (personal_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var betsteuern_monat_ges_k = (betsteuern_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var betsteuern_gesamt_ges_k = (betsteuern_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var versicherung_monat_ges_k = (versicherung_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var versicherung_gesamt_ges_k = (versicherung_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var besondere_monat_ges_k = (besondere_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var besondere_gesamt_ges_k = (besondere_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var kfzkosten_monat_ges_k = (kfzkosten_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var kfzkosten_gesamt_ges_k = (kfzkosten_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var abschreibung_monat_ges_k = (abschreibung_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var abschreibung_gesamt_ges_k = (abschreibung_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var leistungen_monat_ges_k = (leistungen_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var leistungen_gesamt_ges_k = (leistungen_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var steuerberatung_monat_ges_k = (steuerberatung_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var steuerberatung_gesamt_ges_k = (steuerberatung_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var abgabenundversicherung_monat_ges_k = (abgabenundversicherung_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var abgabenundversicherung_gesamt_ges_k = (abgabenundversicherung_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var geschenkeundbewirtung_monat_ges_k = (geschenkeundbewirtung_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var geschenkeundbewirtung_gesamt_ges_k = (geschenkeundbewirtung_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var raumundgrundstueck_monat_ges_k = (raumundgrundstueck_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var raumundgrundstueck_gesamt_ges_k = (raumundgrundstueck_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+var soko_monat_ges_k = (soko_monat * gesamtkosten_monat_ges_k) / gesamtkosten_monat;
+var soko_gesamt_ges_k = (soko_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
+
+// Überschrift + Steuerpflichtiger
+document.write('<br><table border="0" width="80%" align="center" cellpadding="2" cellspacing="0"><tr>');
+document.write('<td valign="top" style="font-size: 18px; font-weight: bold; text-decoration: underline;"><a onclick="alert(InfoText)" id="Test" onmouseover="this.innerHTML = \'Bitte hier klicken für wichtige Informationen\'" onmouseout="this.innerHTML=\'Betriebswirtschaftliche Auswertung f&uuml;r das Jahr \'+myECTdok.Jahr ">Betriebswirtschaftliche Auswertung f&uuml;r das Jahr ' + myECTdok.Jahr + '</a></td>');
+document.write('<td  align=right rowspan=2 width="20%"><nobr>' + myECTeinst.HoleEinstellung("vorname") + ' ' + myECTeinst.HoleEinstellung("name") + '<br>' + myECTeinst.HoleEinstellung("strasse") + '<br>' + myECTeinst.HoleEinstellung("plz") + ' ' + myECTeinst.HoleEinstellung("ort") + '</nobr></td>');
+document.write('</tr><tr>');
+document.write('<td>Hauptsteuernummer: ' + myECTeinst.HoleEinstellung("fsteuernummer") + '</td></tr></table><br>');
+
+// Tabelle
+document.write('<table border="1" width="80%" border-color="#000000" style="table-layout:fixed; background-color: #cccccc; border-width: 1px; border-color: #000000; border-style:solid; border-collapse:collapse; empty-cells:hide;" align=center cellspacing=0 cellpadding=4>');
+document.write('<tr>');
+document.write('<td align=left width=350>Bezeichnung</td>');
+document.write('<td align=right width=100>'+MonatName+'/'+myECTdok.Jahr+'</td>');
+document.write('<td align=right width=100>% Ges.-<br>Leistg.</td>');
+document.write('<td align=right width=100>% Ges.-<br>Kosten</td>');
+document.write('<td align=right width=100>Jan/'+myECTdok.Jahr+' -<br>'+MonatName+'/'+myECTdok.Jahr+'</td>');
+document.write('<td align=right width=100>% Ges.-<br>Leistg.</td>');
+document.write('<td align=right width=100>% Ges.-<br>Kosten</td>');
+document.write('</tr>');
+
+// Umsatzerloese ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Umsatzerl&ouml;se</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatzerloes_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatzerloes_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatzerloes_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatzerloes_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+document.write('</tr>');
+
+
+// Gesamtleistung ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Gesamtleistung</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(monatleistung) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(monatleistung_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(monatleistung_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtleistung) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtleistung_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtleistung_ges_k) + '</td>');
+document.write('</tr>');
+
+// Material/Wareneinkauf ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Mat./Wareneinkauf</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// Rohertrag ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Rohertrag</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// leerzeile einfuegen.
+document.write('<tr>');
+document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+document.write('</tr>');
+
+// So. betr. Erlöse ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">So. betr. Erlöse</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// leerzeile einfuegen.
+document.write('<tr>');
+document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+document.write('</tr>');
+
+// Betriebl. Rohertrag ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Betriebl. Rohertrag</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// leerzeile einfuegen.
+document.write('<tr>');
+document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+document.write('</tr>');
+
+// Personalkosten ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Personalkosten</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// Betriebl. Steuern ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Betriebl. Steuern</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// Versich./Beiträge ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Versich./Beiträge</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(versicherung_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(versicherung_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(versicherung_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(versicherung_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(versicherung_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(versicherung_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// Telefon Kosten ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Telefon Kosten</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// Kfz-Kosten (o. St.) ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Kfz-Kosten (o. St.)</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// Abschreibung ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Abschreibung</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// Bezogene Leistungen ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Bezogene Leistungen</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// Steuerberatung ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Rechts- und Steuerberatung</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// Beiträge, Gebühren, Abgaben und Versicherungen ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Beiträge, Gebühren, Abgaben und Versicherungen</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// Geschenke und Bewirtungsaufwendungen ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Geschenke und Bewirtungsaufwendungen</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// Raumkosten und Grundstücksaufwendungen ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Raumkosten und Grundst&uuml;cksaufwendungen</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// Sonstige Kosten ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Sonstige Kosten</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// Gesamtkosten ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Gesamtkosten</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_monat_ges_k) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_gesamt_ges_k) + '</td>');
+document.write('</tr>');
+
+// leerzeile einfuegen.
+document.write('<tr>');
+document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+document.write('</tr>');
+
+// Betriebsergebnis ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Betriebsergebnis</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+document.write('</tr>');
+
+// leerzeile einfuegen.
+document.write('<tr>');
+document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+document.write('</tr>');
+
+// Zinsaufwand ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Zinsaufwand</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+document.write('</tr>');
+
+// Zinsertrag / Entnahme von Anlagevermögen ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Entnahme von Anlageverm&ouml;gen</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+document.write('</tr>');
+
+// leerzeile einfuegen.
+document.write('<tr>');
+document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+document.write('</tr>');
+
+// Vorläufiges Ergebnis ausrechnen und anzeigen.
+document.write('<tr>');
+document.write('<td align=left style="background-color:#ffffff;">Vorl&auml;ufiges Ergebnis</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_monat) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_monat_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_gesamt) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_gesamt_ges_l) + '</td>');
+document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+document.write('</tr>');
+
+document.write('</table>');
+
+//Hier die Tabelle für die Btriebe aufbauen.
+if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
+for (var x = 0; x < betriebe.length; ++x ) {
+	var betrieb_neumonat = "Netto_Monat_"+betriebe[x]["Name"];
+	var betrieb_neugesamt = "Netto_Gesamt_"+betriebe[x]["Name"];
+
+	var umsatz_betrieb_monat = 0;
+	var umsatz_betrieb_gesamt = 0;
+	for (var i = 0; i < erloeskonten.length; ++i ) {
+		if (erloeskonten[i]["EinFeld"] == 1112) {
+			umsatz_betrieb_monat = umsatz_betrieb_monat + erloeskonten[i][betrieb_neumonat];
+			umsatz_betrieb_gesamt = umsatz_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
+		}
+	}
+
+	var gesamt_betrieb_monat = 0;
+	var gesamt_betrieb_gesamt = 0;
+	for (var i = 0; i < erloeskonten.length; ++i ) {
+		if (erloeskonten[i]["EinFeld"] == 1112) {
+			gesamt_betrieb_monat = gesamt_betrieb_monat + erloeskonten[i][betrieb_neumonat];
+			gesamt_betrieb_gesamt = gesamt_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
+		}
+	}
+
+	var warenek_betrieb_monat = 0;
+	var warenek_betrieb_gesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["AusFeld"] == 1100) {
+			warenek_betrieb_monat = warenek_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+			warenek_betrieb_gesamt = warenek_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		}
+	}
+
+	var roh_betrieb_monat = 0;
+	var roh_betrieb_gesamt = 0;
+	roh_betrieb_monat = gesamt_betrieb_monat - warenek_betrieb_monat;
+	roh_betrieb_gesamt = gesamt_betrieb_gesamt - warenek_betrieb_gesamt;
+
+	var sonstigeerloes_betrieb_monat = 0;
+	var sonstigeerloes_betrieb_gesamt = 0;
+	for (var i = 0; i < erloeskonten.length; ++i ) {
+		if (erloeskonten[i]["EinFeld"] == 1103 || erloeskonten[i]["EinFeld"] == 1106 || erloeskonten[i]["EinFeld"] == 1108) {
+			sonstigeerloes_betrieb_monat = sonstigeerloes_betrieb_monat + erloeskonten[i][betrieb_neumonat];
+			sonstigeerloes_betrieb_gesamt = sonstigeerloes_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
+		}
+	}
+
+	var bet_rohertrag_betrieb_monat = 0;
+	var bet_rohertrag_betrieb_gesamt = 0;
+	bet_rohertrag_betrieb_monat = roh_betrieb_monat + sonstigeerloes_betrieb_monat;
+	bet_rohertrag_betrieb_gesamt = roh_betrieb_gesamt + sonstigeerloes_betrieb_gesamt;
+
+	var personal_betrieb_monat = 0;
+	var personal_betrieb_gesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["AusFeld"] == 1120) {
+			personal_betrieb_monat = personal_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+			personal_betrieb_gesamt = personal_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		}
+	}
+	
+	var betsteuern_betrieb_monat = 0;
+	var betsteuern_betrieb_gesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["AusFeld"] == 1217 || ausgabenkonten[i]["AusFeld"] == 1218) {
+			betsteuern_betrieb_monat = betsteuern_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+			betsteuern_betrieb_gesamt = betsteuern_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		}
+	}
+
+	var versicherung_betrieb_monat = 0;
+	var versicherung_betrieb_gesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["AusFeld"] == 1145) {
+			versicherung_betrieb_monat = versicherung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+			versicherung_betrieb_gesamt = versicherung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		}
+	}
+	
+	var besondere_betrieb_monat = 0;
+	var besondere_betrieb_gesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["AusFeld"] == 1280) {
+			besondere_betrieb_monat = besondere_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+			besondere_betrieb_gesamt = besondere_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		}
+	}
+	
+	var kfzkosten_betrieb_monat = 0;
+	var kfzkosten_betrieb_gesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["AusFeld"] == 1146 || ausgabenkonten[i]["AusFeld"] == 1147) {
+			kfzkosten_betrieb_monat = kfzkosten_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+			kfzkosten_betrieb_gesamt = kfzkosten_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		}
+	}
+	
+	var abschreibung_betrieb_monat = 0;
+	var abschreibung_betrieb_gesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["AusFeld"] == 1130) {
+			abschreibung_betrieb_monat = abschreibung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+			abschreibung_betrieb_gesamt = abschreibung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		}
+	}
+
+	var leistungen_betrieb_monat = 0;
+	var leistungen_betrieb_gesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["AusFeld"] == 1110) {
+			leistungen_betrieb_monat = leistungen_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+			leistungen_betrieb_gesamt = leistungen_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		}
+	}
+
+	var steuerberatung_betrieb_monat = 0;
+	var steuerberatung_betrieb_gesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["AusFeld"] == 1194) {
+			steuerberatung_betrieb_monat = steuerberatung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+			steuerberatung_betrieb_gesamt = steuerberatung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		}
+	}
+
+	var abgabenundversicherung_betrieb_monat = 0;
+	var abgabenundversicherung_betrieb_gesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["AusFeld"] == 1223) {
+			abgabenundversicherung_betrieb_monat = abgabenundversicherung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+			abgabenundversicherung_betrieb_gesamt = abgabenundversicherung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		}
+	}
+
+	var geschenkeundbewirtung_betrieb_monat = 0;
+	var geschenkeundbewirtung_betrieb_gesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["AusFeld"] == 1164 || ausgabenkonten[i]["AusFeld"] == 1165 || ausgabenkonten[i]["AusFeld"] == 1174 || ausgabenkonten[i]["AusFeld"] == 1175) {
+			geschenkeundbewirtung_betrieb_monat = geschenkeundbewirtung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+			geschenkeundbewirtung_betrieb_gesamt = geschenkeundbewirtung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		}
+	}
+
+	var raumundgrundstueck_betrieb_monat = 0;
+	var raumundgrundstueck_betrieb_gesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["AusFeld"] == 1150 || ausgabenkonten[i]["AusFeld"] == 1151 || ausgabenkonten[i]["AusFeld"] == 1152) {
+			raumundgrundstueck_betrieb_monat = raumundgrundstueck_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+			raumundgrundstueck_betrieb_gesamt = raumundgrundstueck_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		}
+	}
+
+	var soko_betrieb_monat = 0;
+	var soko_betrieb_gesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["AusFeld"] == 1177 || ausgabenkonten[i]["AusFeld"] == 1168 || ausgabenkonten[i]["AusFeld"] == 1183) {
+			soko_betrieb_monat = soko_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+			soko_betrieb_gesamt = soko_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		}
+	}
+	
+	var gesamtkosten_betrieb_monat = 0;
+	var gesamtkosten_betrieb_gesamt = 0;
+	gesamtkosten_betrieb_monat = personal_betrieb_monat + betsteuern_betrieb_monat + versicherung_betrieb_monat + besondere_betrieb_monat + kfzkosten_betrieb_monat + abschreibung_betrieb_monat + leistungen_betrieb_monat + steuerberatung_betrieb_monat + abgabenundversicherung_betrieb_monat + geschenkeundbewirtung_betrieb_monat + raumundgrundstueck_betrieb_monat + soko_betrieb_monat;
+	gesamtkosten_betrieb_gesamt = personal_betrieb_gesamt + betsteuern_betrieb_gesamt + versicherung_betrieb_gesamt + besondere_betrieb_gesamt + kfzkosten_betrieb_gesamt + abschreibung_betrieb_gesamt + leistungen_betrieb_gesamt + steuerberatung_betrieb_gesamt + abgabenundversicherung_betrieb_gesamt + geschenkeundbewirtung_betrieb_gesamt + raumundgrundstueck_betrieb_gesamt + soko_betrieb_gesamt;
+
+	var betriebsergebnis_betrieb_monat = 0;
+	var betriebsergebnis_betrieb_gesamt = 0;
+	betriebsergebnis_betrieb_monat = bet_rohertrag_betrieb_monat - gesamtkosten_betrieb_monat;
+	betriebsergebnis_betrieb_gesamt = bet_rohertrag_betrieb_gesamt - gesamtkosten_betrieb_gesamt;
+	
+	var zinsaufwand_betrieb_monat = 0;
+	var zinsaufwand_betrieb_gesamt = 0;
+	for (var i = 0; i < ausgabenkonten.length; ++i ) {
+		if (ausgabenkonten[i]["AusFeld"] == 1232 || ausgabenkonten[i]["AusFeld"] == 1234) {
+			zinsaufwand_betrieb_monat = zinsaufwand_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+			zinsaufwand_betrieb_gesamt = zinsaufwand_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		}
+	}
+	
+	var zinsertrag_betrieb_monat = 0;
+	var zinsertrag_betrieb_gesamt = 0;
+	for (var i = 0; i < erloeskonten.length; ++i ) {
+		if (erloeskonten[i]["EinFeld"] == 1102) {
+			zinsertrag_betrieb_monat = zinsertrag_betrieb_monat + erloeskonten[i][betrieb_neumonat];
+			zinsertrag_betrieb_gesamt = zinsertrag_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
+		}
+	}
+	
+	var vorergebnis_betrieb_monat = 0;
+	var vorergebnis_betrieb_gesamt = 0;
+	vorergebnis_betrieb_monat = betriebsergebnis_betrieb_monat + zinsertrag_betrieb_monat - zinsaufwand_betrieb_monat;
+	vorergebnis_betrieb_gesamt = betriebsergebnis_betrieb_gesamt + zinsertrag_betrieb_gesamt - zinsaufwand_betrieb_gesamt;	
+
+	var gesamt_betrieb_monat_ges_l = 100;
+	var gesamt_betrieb_gesamt_ges_l = 100;
+
+	var umsatz_betrieb_monat_ges_l = 100;
+	var umsatz_betrieb_gesamt_ges_l = 100;
+
+	var gesamtkosten_betrieb_monat_ges_k = 100;
+	var gesamtkosten_betrieb_gesamt_ges_k = 100;	
+
+	var warenek_betrieb_monat_ges_l = (warenek_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var warenek_betrieb_gesamt_ges_l = (warenek_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var roh_betrieb_monat_ges_l = (roh_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var roh_betrieb_gesamt_ges_l = (roh_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var sonstigeerloes_betrieb_monat_ges_l = (sonstigeerloes_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var sonstigeerloes_betrieb_gesamt_ges_l = (sonstigeerloes_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var bet_rohertrag_betrieb_monat_ges_l = roh_betrieb_monat_ges_l + sonstigeerloes_betrieb_monat_ges_l;
+	var bet_rohertrag_betrieb_gesamt_ges_l = roh_betrieb_gesamt_ges_l + sonstigeerloes_betrieb_gesamt_ges_l;
+
+	var personal_betrieb_monat_ges_l = (personal_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var personal_betrieb_gesamt_ges_l = (personal_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var betsteuern_betrieb_monat_ges_l = (betsteuern_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var betsteuern_betrieb_gesamt_ges_l = (betsteuern_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var versicherung_betrieb_monat_ges_l = (versicherung_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var versicherung_betrieb_gesamt_ges_l = (versicherung_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var besondere_betrieb_monat_ges_l = (besondere_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var besondere_betrieb_gesamt_ges_l = (besondere_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var kfzkosten_betrieb_monat_ges_l = (kfzkosten_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var kfzkosten_betrieb_gesamt_ges_l = (kfzkosten_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var abschreibung_betrieb_monat_ges_l = (abschreibung_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var abschreibung_betrieb_gesamt_ges_l = (abschreibung_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var leistungen_betrieb_monat_ges_l = (leistungen_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var leistungen_betrieb_gesamt_ges_l = (leistungen_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var steuerberatung_betrieb_monat_ges_l = (steuerberatung_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var steuerberatung_betrieb_gesamt_ges_l = (steuerberatung_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var abgabenundversicherung_betrieb_monat_ges_l = (abgabenundversicherung_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var abgabenundversicherung_betrieb_gesamt_ges_l = (abgabenundversicherung_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var geschenkeundbewirtung_betrieb_monat_ges_l = (geschenkeundbewirtung_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var geschenkeundbewirtung_betrieb_gesamt_ges_l = (geschenkeundbewirtung_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var raumundgrundstueck_betrieb_monat_ges_l = (raumundgrundstueck_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var raumundgrundstueck_betrieb_gesamt_ges_l = (raumundgrundstueck_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var soko_betrieb_monat_ges_l = (soko_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var soko_betrieb_gesamt_ges_l = (soko_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var gesamtkosten_betrieb_monat_ges_l = (gesamtkosten_betrieb_monat * gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var gesamtkosten_betrieb_gesamt_ges_l = (gesamtkosten_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var betriebsergebnis_betrieb_monat_ges_l = (betriebsergebnis_betrieb_monat *  gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var betriebsergebnis_betrieb_gesamt_ges_l = (betriebsergebnis_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var zinsaufwand_betrieb_monat_ges_l = (zinsaufwand_betrieb_monat *  gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var zinsaufwand_betrieb_gesamt_ges_l = (zinsaufwand_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var zinsertrag_betrieb_monat_ges_l = (zinsertrag_betrieb_monat *  gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var zinsertrag_betrieb_gesamt_ges_l = (zinsertrag_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var vorergebnis_betrieb_monat_ges_l = (vorergebnis_betrieb_monat *  gesamt_betrieb_monat_ges_l) / umsatz_betrieb_monat;
+	var vorergebnis_betrieb_gesamt_ges_l = (vorergebnis_betrieb_gesamt * gesamt_betrieb_gesamt_ges_l) / umsatz_betrieb_gesamt;
+
+	var gesamt_betrieb_monat_ges_k = (gesamt_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var gesamt_betrieb_gesamt_ges_k = (gesamt_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var warenek_betrieb_monat_ges_k = (warenek_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var warenek_betrieb_gesamt_ges_k = (warenek_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var roh_betrieb_monat_ges_k = (roh_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var roh_betrieb_gesamt_ges_k = (roh_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var sonstigeerloes_betrieb_monat_ges_k = (sonstigeerloes_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var sonstigeerloes_betrieb_gesamt_ges_k = (sonstigeerloes_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var bet_rohertrag_betrieb_monat_ges_k = (bet_rohertrag_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var bet_rohertrag_betrieb_gesamt_ges_k = (bet_rohertrag_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var personal_betrieb_monat_ges_k = (personal_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var personal_betrieb_gesamt_ges_k = (personal_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var betsteuern_betrieb_monat_ges_k = (betsteuern_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var betsteuern_betrieb_gesamt_ges_k = (betsteuern_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var versicherung_betrieb_monat_ges_k = (versicherung_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var versicherung_betrieb_gesamt_ges_k = (versicherung_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var besondere_betrieb_monat_ges_k = (besondere_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var besondere_betrieb_gesamt_ges_k = (besondere_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var kfzkosten_betrieb_monat_ges_k = (kfzkosten_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var kfzkosten_betrieb_gesamt_ges_k = (kfzkosten_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var abschreibung_betrieb_monat_ges_k = (abschreibung_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var abschreibung_betrieb_gesamt_ges_k = (abschreibung_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var leistungen_betrieb_monat_ges_k = (leistungen_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var leistungen_betrieb_gesamt_ges_k = (leistungen_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var steuerberatung_betrieb_monat_ges_k = (steuerberatung_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var steuerberatung_betrieb_gesamt_ges_k = (steuerberatung_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var abgabenundversicherung_betrieb_monat_ges_k = (abgabenundversicherung_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var abgabenundversicherung_betrieb_gesamt_ges_k = (abgabenundversicherung_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var geschenkeundbewirtung_betrieb_monat_ges_k = (geschenkeundbewirtung_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var geschenkeundbewirtung_betrieb_gesamt_ges_k = (geschenkeundbewirtung_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var raumundgrundstueck_betrieb_monat_ges_k = (raumundgrundstueck_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var raumundgrundstueck_betrieb_gesamt_ges_k = (raumundgrundstueck_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	var soko_betrieb_monat_ges_k = (soko_betrieb_monat * gesamtkosten_betrieb_monat_ges_k) / gesamtkosten_betrieb_monat;
+	var soko_betrieb_gesamt_ges_k = (soko_betrieb_gesamt * gesamtkosten_betrieb_gesamt_ges_k) / gesamtkosten_betrieb_gesamt;
+
+	// Tabelle
+	// Überschrift + Steuerpflichtiger
+	document.write('<br><table border="0" width="80%" align="center" cellpadding="2" cellspacing="0"><tr>');
+	document.write('<td valign="top" style="font-size: 18px; font-weight: bold; text-decoration: underline;"><a onclick="alert(InfoText)" id="Test" onmouseover="this.innerHTML = \'Bitte hier klicken für wichtige Informationen\'" onmouseout="this.innerHTML=\'Betriebswirtschaftliche Auswertung f&uuml;r das Jahr \'+myECTdok.Jahr ">Betriebswirtschaftliche Auswertung f&uuml;r das Jahr ' + myECTdok.Jahr + '</a></td>');
+	document.write('<td  align=right rowspan=2 width="20%"><nobr>' + myECTeinst.HoleEinstellung("vorname") + ' ' + myECTeinst.HoleEinstellung("name") + '<br>' + myECTeinst.HoleEinstellung("strasse") + '<br>' + myECTeinst.HoleEinstellung("plz") + ' ' + myECTeinst.HoleEinstellung("ort") + '</nobr></td>');
+	document.write('</tr><tr>');
+	document.write('<td>Betrieb: ' + betriebe[x]["Name"] + '&nbsp;&nbsp;&nbsp;&nbsp;Betriebsteuernummer: ' + betriebe[x]["Betriebssteuernr"] + '</td></tr></table><br>');
+
+	document.write('<table border="1" width="80%" border-color="#000000" style="table-layout:fixed; background-color: #cccccc; border-width: 1px; border-color: #000000; border-style:solid; border-collapse:collapse; empty-cells:hide;" align=center cellspacing=0 cellpadding=4>');
+	document.write('<tr>');
+	document.write('<td align=left width=350>Bezeichnung</td>');
+	document.write('<td align=right width=100>'+MonatName+'/'+myECTdok.Jahr+'</td>');
+	document.write('<td align=right width=100>% Ges.-<br>Leistg.</td>');
+	document.write('<td align=right width=100>% Ges.-<br>Kosten</td>');
+	document.write('<td align=right width=100>Jan/'+myECTdok.Jahr+' -<br>'+MonatName+'/'+myECTdok.Jahr+'</td>');
+	document.write('<td align=right width=100>% Ges.-<br>Leistg.</td>');
+	document.write('<td align=right width=100>% Ges.-<br>Kosten</td>');
+	document.write('</tr>');
+
+	// Umsatzerloese ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Umsatzerl&ouml;se</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatz_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatz_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatz_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatz_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	document.write('</tr>');
+
+	// Gesamtleistung Betriebe ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Gesamtleistung</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// Material/Wareneinkauf ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Mat./Wareneinkauf</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// Rohertrag ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Rohertrag</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// leerzeile einfuegen.
+	document.write('<tr>');
+	document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+	document.write('</tr>');
+
+	// So. betr. Erlöse ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">So. betr. Erlöse</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// leerzeile einfuegen.
+	document.write('<tr>');
+	document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+	document.write('</tr>');
+
+	// Betriebl. Rohertrag ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Betriebl. Rohertrag</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// leerzeile einfuegen.
+	document.write('<tr>');
+	document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+	document.write('</tr>');
+
+	// Personalkosten ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Personalkosten</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// Betriebl. Steuern ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Betriebl. Steuern</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// Versich./Beiträge ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Versich./Beiträge</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(versicherung_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(versicherung_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(versicherung_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(versicherung_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(versicherung_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(versicherung_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// Telefon Kosten ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Telefon Kosten</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// Kfz-Kosten (o. St.) ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Kfz-Kosten (o. St.)</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// Abschreibung ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Abschreibung</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// Bezogene Leistungen ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Bezogene Leistungen</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// Steuerberatung ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Rechts- und Steuerberatung</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// Beiträge, Gebühren, Abgaben und Versicherungen ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Beiträge, Gebühren, Abgaben und Versicherungen</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// Geschenke und Bewirtungsaufwendungen ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Geschenke und Bewirtungsaufwendungen</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// Raumkosten und Grundstücksaufwendungen ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Raumkosten und Grundst&uuml;cksaufwendungen</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// Sonstige Kosten ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Sonstige Kosten</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// Gesamtkosten ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Gesamtkosten</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_monat_ges_k) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_gesamt_ges_k) + '</td>');
+	document.write('</tr>');
+
+	// leerzeile einfuegen.
+	document.write('<tr>');
+	document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+	document.write('</tr>');
+
+	// Betriebsergebnis ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Betriebsergebnis</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	document.write('</tr>');
+
+	// leerzeile einfuegen.
+	document.write('<tr>');
+	document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+	document.write('</tr>');
+
+	// Zinsaufwand ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Zinsaufwand</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	document.write('</tr>');
+
+	// Zinsertrag / Entnahme von Anlagevermögen ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Entnahme von Anlageverm&ouml;gen</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	document.write('</tr>');
+
+	// leerzeile einfuegen.
+	document.write('<tr>');
+	document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+	document.write('</tr>');
+
+	// Vorläufiges Ergebnis ausrechnen und anzeigen.
+	document.write('<tr>');
+	document.write('<td align=left style="background-color:#ffffff;">Vorl&auml;ufiges Ergebnis</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_betrieb_monat) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_betrieb_monat_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_betrieb_gesamt) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_betrieb_gesamt_ges_l) + '</td>');
+	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	document.write('</tr>');
+
+	document.write('</table>');
+	}
+}
+
+// --> </script>
+</body>
+</html>
+
+
