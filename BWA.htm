@@ -46,17 +46,18 @@ var show_ausgabenkonten = false;
 var show_summe_einnamen = false;
 var show_summe_ausgaben = false;
 
-// © 2015 by Markus Jahnke
+// © 2020 by Markus Jahnke
 
-InfoText ='EasyCT-BWA Version 1.2\n\n';
+InfoText ='EasyCT-BWA Version 1.3\n\n';
 
 // Beschreibung
 
 InfoText +='In der Kopfzeile unter Bezeichnung können Sie sehen, welcher Zeitraum bei der angezeigten BWA ausgewählt ist. Es wird immer der vorangegangene Monat angezeigt. (z.B. im September der August) Die Ausnahme ist der Januar. Im Januar wird entschieden, im aktuellem Jahr wird der Januar angezeigt und im Vorjahr der Dezember.\n\nFür die Auswertung werden die Feldnummern der EÜR verwendet. Die Namen der Felder werden nicht berücksichtigt. Hier noch eine Aufstellung der Feldnummern zu den Bezeichnungen:\n';
-InfoText +='\n1112 = Umsatzerlöse\n1100 = Mat./Wareneinkauf\n1103, 1106, 1108 = So. betr. Erlöse\n1120 = Personalkosten\n1217, 1218 = Betriebl. Steuern\n1145 = Versich./ Beiträge\n1280 = Telefon Kosten\n1146, 1147 = Kfz-Kosten\n1130 = Abschreibung\n1110 = Bezogene Leistungen\n1232 = Zinsaufwand\n1102 = Entnahme von Anlagevermögen\n1194 = Rechts-, und Steuerberatung\n1223 = Beiträge, Gebühren, Abgaben und Versicherungen\n1164, 1165, 1174, 1175 = Geschenke und Bewirtungsaufwendungen\n1150, 1151, 1152 = Raumkosten und Grundst&uuml;cksaufwendungen\n1177, 1183, 1168 = Sonstige Kosten\n';
+InfoText +='\nDeutschland\n1112 = Umsatzerlöse\n1100 = Mat./Wareneinkauf\n1103, 1106, 1108 = So. betr. Erlöse\n1120 = Personalkosten\n1217, 1218 = Betriebl. Steuern\n1145 = Versich./ Beiträge\n1280 = Telefon Kosten\n1146, 1147 = Kfz-Kosten\n1130 = Abschreibung\n1110 = Bezogene Leistungen\n1232, 1234 = Zinsaufwand\n1102 = Entnahme von Anlagevermögen\n1194 = Rechts-, und Steuerberatung\n1223 = Beiträge, Gebühren, Abgaben und Versicherungen\n1164, 1165, 1174, 1175 = Geschenke und Bewirtungsaufwendungen\n1150, 1151, 1152 = Raumkosten und Grundstücksaufwendungen\n1177, 1183, 1168 = Sonstige Kosten\n';
+InfoText +='\nÖsterreich\n9040 = Umsatzerlöse\n9100 = Mat./Wareneinkauf\n9050, 9060, 9090 = So. betr. Erlöse\n9110 = Personalkosten\n9217, 9218 = Betriebl. Steuern\n9225 = Versich./ Beiträge\n9230 = Telefon Kosten\n9160, 9170 = Kfz-Kosten\n9130 = Abschreibung\n9120 = Bezogene Leistungen\n9220, 9234 = Zinsaufwand\n9090 = Entnahme von Anlagevermögen\n9130 = Rechts-, und Steuerberatung\n9223, 9224 = Beiträge, Gebühren, Abgaben und Versicherungen\n9200, 9243, 9244, 9245, 9246 = Geschenke und Bewirtungsaufwendungen\n9150, 9180 = Raumkosten und Grundstücksaufwendungen\n9230, 9259 = Sonstige Kosten\n';
 
 // Die nachfolgende Zeile darf nicht verändert werden!!!!! -- Die Anzeige dieses Info-Textes darf nicht unterdrückt werden!!!!!
-InfoText +='\nKeine Gewähr auf Funktionaliät und Inhalt.\nFehler und Verbesserungsvorschläge bitte im Forum posten.\n\n© 2015 by M. Jahnke\nFreeware-Plugin für EasyCash&Tax © 1998-2011 by Thomas Mielke\nFreie Nutzung und Abänderung und ausschliesslich kostenlose (auch bei Modifikationen!) Weitergabe an Dritte erlaubt.';
+InfoText +='\nKeine Gewähr auf Funktionaliät und Inhalt.\nFehler und Verbesserungsvorschläge bitte im Forum posten.\n\n© 2020 by M. Jahnke\nFreeware-Plugin für EasyCash&Tax © 1998-2020 by Thomas Mielke\nFreie Nutzung und Abänderung und ausschliesslich kostenlose (auch bei Modifikationen!) Weitergabe an Dritte erlaubt.';
 
 //************************************** Funktionen ********************************************************************
 
@@ -165,7 +166,69 @@ if (myECTdok.Jahr < JahrAktuell) {
 var MonatName = "";
 MonatName = MonatText(MonatAktuell);
 
-//************************************** Daten Einlesen *************************************************************
+//************************************** Konten festlegen und Daten Einlesen *************************************************************
+
+// Land einlesen
+var steuerland = myECTeinst.HoleEinstellung("land");
+
+// Konten des landes festlegen
+if (steuerland == 1) {			//Österreich
+	var suchmuster_eur = "E1a";
+	var umsatzerloes_konten = new Array('9040');
+	var gesamtleistung_konten = new Array('9040');
+	var warenek_konten = new Array('9100');
+	var sonstigeerloes_konten = new Array('9050', '9060', '9090');
+	var personal_konten = new Array('9110');
+	var betsteuern_konten = new Array('9217', '9218');
+	var versicherung_konten = new Array('9225');
+	var besondere_konten = new Array('9230');
+	var kfzkosten_konten = new Array('9160', '9170');
+	var abschreibung_konten = new Array('9130');
+	var leistungen_konten = new Array('9120');
+	var steuerberatung_konten = new Array('9130');
+	var abgabenundversicherung_konten = new Array('9223', '9224');
+	var geschenkeundbewirtung_konten = new Array('9200', '9243', '9244', '9245', '9246');
+	var raumundgrundstueck_konten = new Array('9150', '9180');
+	var soko_konten = new Array('9230', '9259');
+	var zinsaufwand_konten = new Array('9220', '9234');
+	var zinsertrag_konten = new Array('9090');
+} else if (steuerland == 2) {	//Schweiz
+
+} else {						//Deutschland
+	var suchmuster_eur = "Rechnung";
+	var umsatzerloes_konten = new Array('1112');
+	var gesamtleistung_konten = new Array('1112');
+	var warenek_konten = new Array('1100');
+	var sonstigeerloes_konten = new Array('1103', '1106', '1108');
+	var personal_konten = new Array('1120');
+	var betsteuern_konten = new Array('1217', '1218');
+	var versicherung_konten = new Array('1145');
+	var besondere_konten = new Array('1280');
+	var kfzkosten_konten = new Array('1146', '1147');
+	var abschreibung_konten = new Array('1130');
+	var leistungen_konten = new Array('1110');
+	var steuerberatung_konten = new Array('1194');
+	var abgabenundversicherung_konten = new Array('1223');
+	var geschenkeundbewirtung_konten = new Array('1164', '1165', '1174', '1175');
+	var raumundgrundstueck_konten = new Array('1150', '1151', '1152');
+	var soko_konten = new Array('1177', '1168', '1183');
+	var zinsaufwand_konten = new Array('1232', '1234');
+	var zinsertrag_konten = new Array('1102');
+}
+
+//document.write('Es wurden das Land ' + steuerland + ' gefunden.<br>');
+//document.write('Suchmuster EUR: ' + suchmuster_eur + '<br>');
+//document.write('laenge Umsatzerloes_Konten: ' + umsatzerloes_konten.length + '<br>');
+
+//len = geschenkeundbewirtung_konten.length;
+//while (len--) {
+//	document.write('Die länge ist: ' + len + ' Hier wird gesucht: ' + geschenkeundbewirtung_konten[len] + ' Konto gefunden:<br>');
+//}
+//delete len; 
+
+
+
+
 
 // wenn vorhanden, Betriebe einlesen
 if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
@@ -221,6 +284,7 @@ if (myECTeinst.HoleEinstellung("[EinnahmenRechnungsposten]00") != '') {
 	var einnahmenrechnungsposten = '';
 	var einnahmenfeldzuweisungen = '';
 	var erloeskonten = new Array();
+	var my2Erloeskonto = new Array();
 	
 	einnahmenrechnungsposten = "[EinnahmenRechnungsposten]" + zaehler1 + zaehler2;
 	einnahmenfeldzuweisungen = "[EinnahmenFeldzuweisungen]" + zaehler1 + zaehler2;
@@ -228,8 +292,18 @@ if (myECTeinst.HoleEinstellung("[EinnahmenRechnungsposten]00") != '') {
 	while (myECTeinst.HoleEinstellung(einnahmenrechnungsposten) != '') {
 		var Erloeskonto = '';
 		Erloeskonto = myECTeinst.HoleEinstellung(einnahmenfeldzuweisungen);
+//		document.write('' + Erloeskonto + ' <br> Erlöskonten gefunden:<br>');
 		var myErloeskonto = Erloeskonto.split("|");
-		var my2Erloeskonto = myErloeskonto[1].split("=");
+		
+		var len = myErloeskonto.length;
+		while (len--) {
+			if (myErloeskonto[len].search(suchmuster_eur) > 1) {
+				my2Erloeskonto = myErloeskonto[len].split("=");
+//				document.write('Ja/Nein: ' + myErloeskonto[len].search(suchmuster_eur) + ' Die länge ist: ' + len + ' Hier wird gesucht: ' + myErloeskonto[len] + ' Treffer ist: ' + my2Erloeskonto[1] + ' Erlöskonto gefunden:<br>');
+			}
+		}
+		
+//		var my2Erloeskonto = myErloeskonto[1].split("=");
 
 		erloeskonten[anzalerloeskonten] = new Object();
 		erloeskonten[anzalerloeskonten]["EinRech"] = myECTeinst.HoleEinstellung(einnahmenrechnungsposten);
@@ -299,7 +373,16 @@ if (myECTeinst.HoleEinstellung("[AusgabenRechnungsposten]00") != '') {
 		var Ausgabenkonto = '';
 		Ausgabenkonto = myECTeinst.HoleEinstellung(ausgabenfeldzuweisungen);
 		var myAusgabenkonto = Ausgabenkonto.split("|");
-		var my2Ausgabenkonto = myAusgabenkonto[1].split("=");
+
+		var len = myAusgabenkonto.length;
+		while (len--) {
+			if (myAusgabenkonto[len].search(suchmuster_eur) > 1) {
+				my2Ausgabenkonto = myAusgabenkonto[len].split("=");
+//				document.write('Ja/Nein: ' + myAusgabenkonto[len].search(suchmuster_eur) + ' Die länge ist: ' + len + ' Hier wird gesucht: ' + myAusgabenkonto[len] + ' Treffer ist: ' + my2Ausgabenkonto[1] + ' Ausgabenkonto gefunden:<br>');
+			}
+		}
+
+//		var my2Ausgabenkonto = myAusgabenkonto[1].split("=");
 
 		ausgabenkonten[anzalausgabenkonten] = new Object();
 		ausgabenkonten[anzalausgabenkonten]["AusRech"] = myECTeinst.HoleEinstellung(ausgabenrechnungsposten);
@@ -453,28 +536,41 @@ if (show_summe_ausgaben) {
 var umsatzerloes_monat = 0;
 var umsatzerloes_gesamt = 0;
 for (var i = 0; i < erloeskonten.length; ++i ) {
-	if (erloeskonten[i]["EinFeld"] == 1112) {
-		umsatzerloes_monat = umsatzerloes_monat + erloeskonten[i]["Netto_Monat"];
-		umsatzerloes_gesamt = umsatzerloes_gesamt + erloeskonten[i]["Netto_Gesamt"];
+	len = umsatzerloes_konten.length;
+	while (len--) {
+		if (erloeskonten[i]["EinFeld"] == umsatzerloes_konten[len]) {
+			umsatzerloes_monat = umsatzerloes_monat + erloeskonten[i]["Netto_Monat"];
+			umsatzerloes_gesamt = umsatzerloes_gesamt + erloeskonten[i]["Netto_Gesamt"];
+		}
+//		document.write('Die länge ist: ' + len + ' Hier wird gesucht: ' + umsatzerloes_konten[len] + ' Konto gefunden:<br>');
 	}
+	delete len; 
 }
 
 var monatleistung = 0;
 var gesamtleistung = 0;
 for (var i = 0; i < erloeskonten.length; ++i ) {
-	if (erloeskonten[i]["EinFeld"] == 1112) {
-		monatleistung = monatleistung + erloeskonten[i]["Netto_Monat"];
-		gesamtleistung = gesamtleistung + erloeskonten[i]["Netto_Gesamt"];
+	len = gesamtleistung_konten.length;
+	while (len--) {
+		if (erloeskonten[i]["EinFeld"] == gesamtleistung_konten[len]) {
+			monatleistung = monatleistung + erloeskonten[i]["Netto_Monat"];
+			gesamtleistung = gesamtleistung + erloeskonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len; 
 }
 
 var warenek_monat = 0;
 var warenek_gesamt = 0;
 for (var i = 0; i < ausgabenkonten.length; ++i ) {
-	if (ausgabenkonten[i]["AusFeld"] == 1100) {
-		warenek_monat = warenek_monat + ausgabenkonten[i]["Netto_Monat"];
-		warenek_gesamt = warenek_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	len = warenek_konten.length;
+	while (len--) {
+		if (ausgabenkonten[i]["AusFeld"] == warenek_konten[len]) {
+			warenek_monat = warenek_monat + ausgabenkonten[i]["Netto_Monat"];
+			warenek_gesamt = warenek_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len; 
 }
 
 var roh_monat = 0;
@@ -485,10 +581,15 @@ roh_gesamt = gesamtleistung - warenek_gesamt;
 var sonstigeerloes_monat = 0;
 var sonstigeerloes_gesamt = 0;
 for (var i = 0; i < erloeskonten.length; ++i ) {
-	if (erloeskonten[i]["EinFeld"] == 1103 || erloeskonten[i]["EinFeld"] == 1106 || erloeskonten[i]["EinFeld"] == 1108) {
-		sonstigeerloes_monat = sonstigeerloes_monat + erloeskonten[i]["Netto_Monat"];
-		sonstigeerloes_gesamt = sonstigeerloes_gesamt + erloeskonten[i]["Netto_Gesamt"];
+	len = sonstigeerloes_konten.length;
+	while (len--) {
+		if (erloeskonten[i]["EinFeld"] == sonstigeerloes_konten[len]) {
+			sonstigeerloes_monat = sonstigeerloes_monat + erloeskonten[i]["Netto_Monat"];
+			sonstigeerloes_gesamt = sonstigeerloes_gesamt + erloeskonten[i]["Netto_Gesamt"];
+		}
+//		document.write('Die länge ist: ' + len + ' Hier wird gesucht: ' + sonstigeerloes_konten[len] + ' Konto gefunden:<br>');
 	}
+	delete len;
 }
 
 var bet_rohertrag_monat = 0;
@@ -499,109 +600,157 @@ bet_rohertrag_gesamt = roh_gesamt + sonstigeerloes_gesamt;
 var personal_monat = 0;
 var personal_gesamt = 0;
 for (var i = 0; i < ausgabenkonten.length; ++i ) {
-	if (ausgabenkonten[i]["AusFeld"] == 1120) {
-		personal_monat = personal_monat + ausgabenkonten[i]["Netto_Monat"];
-		personal_gesamt = personal_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	len = personal_konten.length;
+	while (len--) {
+		if (ausgabenkonten[i]["AusFeld"] == personal_konten[len]) {
+			personal_monat = personal_monat + ausgabenkonten[i]["Netto_Monat"];
+			personal_gesamt = personal_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len;
 }
 
 var betsteuern_monat = 0;
 var betsteuern_gesamt = 0;
 for (var i = 0; i < ausgabenkonten.length; ++i ) {
-	if (ausgabenkonten[i]["AusFeld"] == 1217 || ausgabenkonten[i]["AusFeld"] == 1218) {
-		betsteuern_monat = betsteuern_monat + ausgabenkonten[i]["Netto_Monat"];
-		betsteuern_gesamt = betsteuern_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	len = betsteuern_konten.length;
+	while (len--) {
+		if (ausgabenkonten[i]["AusFeld"] == betsteuern_konten[len]) {
+			betsteuern_monat = betsteuern_monat + ausgabenkonten[i]["Netto_Monat"];
+			betsteuern_gesamt = betsteuern_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len;
 }
 
 var versicherung_monat = 0;
 var versicherung_gesamt = 0;
 for (var i = 0; i < ausgabenkonten.length; ++i ) {
-	if (ausgabenkonten[i]["AusFeld"] == 1145) {
-		versicherung_monat = versicherung_monat + ausgabenkonten[i]["Netto_Monat"];
-		versicherung_gesamt = versicherung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	len = versicherung_konten.length;
+	while (len--) {
+		if (ausgabenkonten[i]["AusFeld"] == versicherung_konten[len]) {
+			versicherung_monat = versicherung_monat + ausgabenkonten[i]["Netto_Monat"];
+			versicherung_gesamt = versicherung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len;
 }
 
 var besondere_monat = 0;
 var besondere_gesamt = 0;
 for (var i = 0; i < ausgabenkonten.length; ++i ) {
-	if (ausgabenkonten[i]["AusFeld"] == 1280) {
-		besondere_monat = besondere_monat + ausgabenkonten[i]["Netto_Monat"];
-		besondere_gesamt = besondere_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	len = besondere_konten.length;
+	while (len--) {
+		if (ausgabenkonten[i]["AusFeld"] == besondere_konten[len]) {
+			besondere_monat = besondere_monat + ausgabenkonten[i]["Netto_Monat"];
+			besondere_gesamt = besondere_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len;
 }
 
 var kfzkosten_monat = 0;
 var kfzkosten_gesamt = 0;
 for (var i = 0; i < ausgabenkonten.length; ++i ) {
-	if (ausgabenkonten[i]["AusFeld"] == 1146 || ausgabenkonten[i]["AusFeld"] == 1147) {
-		kfzkosten_monat = kfzkosten_monat + ausgabenkonten[i]["Netto_Monat"];
-		kfzkosten_gesamt = kfzkosten_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	len = kfzkosten_konten.length;
+	while (len--) {
+		if (ausgabenkonten[i]["AusFeld"] == kfzkosten_konten[len]) {
+			kfzkosten_monat = kfzkosten_monat + ausgabenkonten[i]["Netto_Monat"];
+			kfzkosten_gesamt = kfzkosten_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len;
 }
 
 var abschreibung_monat = 0;
 var abschreibung_gesamt = 0;
 for (var i = 0; i < ausgabenkonten.length; ++i ) {
-	if (ausgabenkonten[i]["AusFeld"] == 1130) {
-		abschreibung_monat = abschreibung_monat + ausgabenkonten[i]["Netto_Monat"];
-		abschreibung_gesamt = abschreibung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	len = abschreibung_konten.length;
+	while (len--) {
+		if (ausgabenkonten[i]["AusFeld"] == abschreibung_konten[len]) {
+			abschreibung_monat = abschreibung_monat + ausgabenkonten[i]["Netto_Monat"];
+			abschreibung_gesamt = abschreibung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len;
 }
 
 var leistungen_monat = 0;
 var leistungen_gesamt = 0;
 for (var i = 0; i < ausgabenkonten.length; ++i ) {
-	if (ausgabenkonten[i]["AusFeld"] == 1110) {
-		leistungen_monat = leistungen_monat + ausgabenkonten[i]["Netto_Monat"];
-		leistungen_gesamt = leistungen_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	len = leistungen_konten.length;
+	while (len--) {
+		if (ausgabenkonten[i]["AusFeld"] == leistungen_konten[len]) {
+			leistungen_monat = leistungen_monat + ausgabenkonten[i]["Netto_Monat"];
+			leistungen_gesamt = leistungen_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len;
 }
 
 var steuerberatung_monat = 0;
 var steuerberatung_gesamt = 0;
 for (var i = 0; i < ausgabenkonten.length; ++i ) {
-	if (ausgabenkonten[i]["AusFeld"] == 1194) {
-		steuerberatung_monat = steuerberatung_monat + ausgabenkonten[i]["Netto_Monat"];
-		steuerberatung_gesamt = steuerberatung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	len = steuerberatung_konten.length;
+	while (len--) {
+		if (ausgabenkonten[i]["AusFeld"] == steuerberatung_konten[len]) {
+			steuerberatung_monat = steuerberatung_monat + ausgabenkonten[i]["Netto_Monat"];
+			steuerberatung_gesamt = steuerberatung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len;
 }
 
 var abgabenundversicherung_monat = 0;
 var abgabenundversicherung_gesamt = 0;
 for (var i = 0; i < ausgabenkonten.length; ++i ) {
-	if (ausgabenkonten[i]["AusFeld"] == 1223) {
-		abgabenundversicherung_monat = abgabenundversicherung_monat + ausgabenkonten[i]["Netto_Monat"];
-		abgabenundversicherung_gesamt = abgabenundversicherung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	len = abgabenundversicherung_konten.length;
+	while (len--) {
+		if (ausgabenkonten[i]["AusFeld"] == abgabenundversicherung_konten[len]) {
+			abgabenundversicherung_monat = abgabenundversicherung_monat + ausgabenkonten[i]["Netto_Monat"];
+			abgabenundversicherung_gesamt = abgabenundversicherung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len;
 }
 
 var geschenkeundbewirtung_monat = 0;
 var geschenkeundbewirtung_gesamt = 0;
 for (var i = 0; i < ausgabenkonten.length; ++i ) {
-	if (ausgabenkonten[i]["AusFeld"] == 1164 || ausgabenkonten[i]["AusFeld"] == 1165 || ausgabenkonten[i]["AusFeld"] == 1174 || ausgabenkonten[i]["AusFeld"] == 1175) {
-		geschenkeundbewirtung_monat = geschenkeundbewirtung_monat + ausgabenkonten[i]["Netto_Monat"];
-		geschenkeundbewirtung_gesamt = geschenkeundbewirtung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	len = geschenkeundbewirtung_konten.length;
+	while (len--) {
+		if (ausgabenkonten[i]["AusFeld"] == geschenkeundbewirtung_konten[len]) {
+			geschenkeundbewirtung_monat = geschenkeundbewirtung_monat + ausgabenkonten[i]["Netto_Monat"];
+			geschenkeundbewirtung_gesamt = geschenkeundbewirtung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len;
 }
 
 var raumundgrundstueck_monat = 0;
 var raumundgrundstueck_gesamt = 0;
 for (var i = 0; i < ausgabenkonten.length; ++i ) {
-	if (ausgabenkonten[i]["AusFeld"] == 1150 || ausgabenkonten[i]["AusFeld"] == 1151 || ausgabenkonten[i]["AusFeld"] == 1152) {
-		raumundgrundstueck_monat = raumundgrundstueck_monat + ausgabenkonten[i]["Netto_Monat"];
-		raumundgrundstueck_gesamt = raumundgrundstueck_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	len = raumundgrundstueck_konten.length;
+	while (len--) {
+		if (ausgabenkonten[i]["AusFeld"] == raumundgrundstueck_konten[len]) {
+			raumundgrundstueck_monat = raumundgrundstueck_monat + ausgabenkonten[i]["Netto_Monat"];
+			raumundgrundstueck_gesamt = raumundgrundstueck_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len;
 }
 
 var soko_monat = 0;
 var soko_gesamt = 0;
 for (var i = 0; i < ausgabenkonten.length; ++i ) {
-	if (ausgabenkonten[i]["AusFeld"] == 1177 || ausgabenkonten[i]["AusFeld"] == 1168 || ausgabenkonten[i]["AusFeld"] == 1183) {
-		soko_monat = soko_monat + ausgabenkonten[i]["Netto_Monat"];
-		soko_gesamt = soko_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	len = soko_konten.length;
+	while (len--) {
+		if (ausgabenkonten[i]["AusFeld"] == soko_konten[len]) {
+			soko_monat = soko_monat + ausgabenkonten[i]["Netto_Monat"];
+			soko_gesamt = soko_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len;
 }
 
 var gesamtkosten_monat = 0;
@@ -617,19 +766,27 @@ betriebsergebnis_gesamt = bet_rohertrag_gesamt - gesamtkosten_gesamt;
 var zinsaufwand_monat = 0;
 var zinsaufwand_gesamt = 0;
 for (var i = 0; i < ausgabenkonten.length; ++i ) {
-	if (ausgabenkonten[i]["AusFeld"] == 1232 || ausgabenkonten[i]["AusFeld"] == 1234) {
-		zinsaufwand_monat = zinsaufwand_monat + ausgabenkonten[i]["Netto_Monat"];
-		zinsaufwand_gesamt = zinsaufwand_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+	len = zinsaufwand_konten.length;
+	while (len--) {
+		if (ausgabenkonten[i]["AusFeld"] == zinsaufwand_konten[len]) {
+			zinsaufwand_monat = zinsaufwand_monat + ausgabenkonten[i]["Netto_Monat"];
+			zinsaufwand_gesamt = zinsaufwand_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len;
 }
 
 var zinsertrag_monat = 0;
 var zinsertrag_gesamt = 0;
 for (var i = 0; i < erloeskonten.length; ++i ) {
-	if (erloeskonten[i]["EinFeld"] == 1102) {
-		zinsertrag_monat = zinsertrag_monat + erloeskonten[i]["Netto_Monat"];
-		zinsertrag_gesamt = zinsertrag_gesamt + erloeskonten[i]["Netto_Gesamt"];
+	len = zinsertrag_konten.length;
+	while (len--) {
+		if (erloeskonten[i]["EinFeld"] == zinsertrag_konten[len]) {
+			zinsertrag_monat = zinsertrag_monat + erloeskonten[i]["Netto_Monat"];
+			zinsertrag_gesamt = zinsertrag_gesamt + erloeskonten[i]["Netto_Gesamt"];
+		}
 	}
+	delete len;
 }
 
 var vorergebnis_monat = 0;
@@ -1074,28 +1231,40 @@ for (var x = 0; x < betriebe.length; ++x ) {
 	var umsatz_betrieb_monat = 0;
 	var umsatz_betrieb_gesamt = 0;
 	for (var i = 0; i < erloeskonten.length; ++i ) {
-		if (erloeskonten[i]["EinFeld"] == 1112) {
-			umsatz_betrieb_monat = umsatz_betrieb_monat + erloeskonten[i][betrieb_neumonat];
-			umsatz_betrieb_gesamt = umsatz_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
+		len = umsatzerloes_konten.length;
+		while (len--) {
+			if (erloeskonten[i]["EinFeld"] == umsatzerloes_konten[len]) {
+				umsatz_betrieb_monat = umsatz_betrieb_monat + erloeskonten[i][betrieb_neumonat];
+				umsatz_betrieb_gesamt = umsatz_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 
 	var gesamt_betrieb_monat = 0;
 	var gesamt_betrieb_gesamt = 0;
 	for (var i = 0; i < erloeskonten.length; ++i ) {
-		if (erloeskonten[i]["EinFeld"] == 1112) {
-			gesamt_betrieb_monat = gesamt_betrieb_monat + erloeskonten[i][betrieb_neumonat];
-			gesamt_betrieb_gesamt = gesamt_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
+		len = gesamtleistung_konten.length;
+		while (len--) {
+			if (erloeskonten[i]["EinFeld"] == gesamtleistung_konten[len]) {
+				gesamt_betrieb_monat = gesamt_betrieb_monat + erloeskonten[i][betrieb_neumonat];
+				gesamt_betrieb_gesamt = gesamt_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 
 	var warenek_betrieb_monat = 0;
 	var warenek_betrieb_gesamt = 0;
 	for (var i = 0; i < ausgabenkonten.length; ++i ) {
-		if (ausgabenkonten[i]["AusFeld"] == 1100) {
-			warenek_betrieb_monat = warenek_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
-			warenek_betrieb_gesamt = warenek_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		len = warenek_konten.length;
+		while (len--) {
+			if (ausgabenkonten[i]["AusFeld"] == warenek_konten[len]) {
+				warenek_betrieb_monat = warenek_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+				warenek_betrieb_gesamt = warenek_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 
 	var roh_betrieb_monat = 0;
@@ -1106,10 +1275,14 @@ for (var x = 0; x < betriebe.length; ++x ) {
 	var sonstigeerloes_betrieb_monat = 0;
 	var sonstigeerloes_betrieb_gesamt = 0;
 	for (var i = 0; i < erloeskonten.length; ++i ) {
-		if (erloeskonten[i]["EinFeld"] == 1103 || erloeskonten[i]["EinFeld"] == 1106 || erloeskonten[i]["EinFeld"] == 1108) {
-			sonstigeerloes_betrieb_monat = sonstigeerloes_betrieb_monat + erloeskonten[i][betrieb_neumonat];
-			sonstigeerloes_betrieb_gesamt = sonstigeerloes_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
+		len = sonstigeerloes_konten.length;
+		while (len--) {
+			if (erloeskonten[i]["EinFeld"] == sonstigeerloes_konten[len]) {
+				sonstigeerloes_betrieb_monat = sonstigeerloes_betrieb_monat + erloeskonten[i][betrieb_neumonat];
+				sonstigeerloes_betrieb_gesamt = sonstigeerloes_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 
 	var bet_rohertrag_betrieb_monat = 0;
@@ -1120,109 +1293,157 @@ for (var x = 0; x < betriebe.length; ++x ) {
 	var personal_betrieb_monat = 0;
 	var personal_betrieb_gesamt = 0;
 	for (var i = 0; i < ausgabenkonten.length; ++i ) {
-		if (ausgabenkonten[i]["AusFeld"] == 1120) {
-			personal_betrieb_monat = personal_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
-			personal_betrieb_gesamt = personal_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		len = personal_konten.length;
+		while (len--) {
+			if (ausgabenkonten[i]["AusFeld"] == personal_konten[len]) {
+				personal_betrieb_monat = personal_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+				personal_betrieb_gesamt = personal_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 	
 	var betsteuern_betrieb_monat = 0;
 	var betsteuern_betrieb_gesamt = 0;
 	for (var i = 0; i < ausgabenkonten.length; ++i ) {
-		if (ausgabenkonten[i]["AusFeld"] == 1217 || ausgabenkonten[i]["AusFeld"] == 1218) {
-			betsteuern_betrieb_monat = betsteuern_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
-			betsteuern_betrieb_gesamt = betsteuern_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		len = betsteuern_konten.length;
+		while (len--) {
+			if (ausgabenkonten[i]["AusFeld"] == betsteuern_konten[len]) {
+				betsteuern_betrieb_monat = betsteuern_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+				betsteuern_betrieb_gesamt = betsteuern_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 
 	var versicherung_betrieb_monat = 0;
 	var versicherung_betrieb_gesamt = 0;
 	for (var i = 0; i < ausgabenkonten.length; ++i ) {
-		if (ausgabenkonten[i]["AusFeld"] == 1145) {
-			versicherung_betrieb_monat = versicherung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
-			versicherung_betrieb_gesamt = versicherung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		len = versicherung_konten.length;
+		while (len--) {
+			if (ausgabenkonten[i]["AusFeld"] == versicherung_konten[len]) {
+				versicherung_betrieb_monat = versicherung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+				versicherung_betrieb_gesamt = versicherung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 	
 	var besondere_betrieb_monat = 0;
 	var besondere_betrieb_gesamt = 0;
 	for (var i = 0; i < ausgabenkonten.length; ++i ) {
-		if (ausgabenkonten[i]["AusFeld"] == 1280) {
-			besondere_betrieb_monat = besondere_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
-			besondere_betrieb_gesamt = besondere_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		len = besondere_konten.length;
+		while (len--) {
+			if (ausgabenkonten[i]["AusFeld"] == besondere_konten[len]) {
+				besondere_betrieb_monat = besondere_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+				besondere_betrieb_gesamt = besondere_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 	
 	var kfzkosten_betrieb_monat = 0;
 	var kfzkosten_betrieb_gesamt = 0;
 	for (var i = 0; i < ausgabenkonten.length; ++i ) {
-		if (ausgabenkonten[i]["AusFeld"] == 1146 || ausgabenkonten[i]["AusFeld"] == 1147) {
-			kfzkosten_betrieb_monat = kfzkosten_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
-			kfzkosten_betrieb_gesamt = kfzkosten_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		len = kfzkosten_konten.length;
+		while (len--) {
+			if (ausgabenkonten[i]["AusFeld"] == kfzkosten_konten[len]) {
+				kfzkosten_betrieb_monat = kfzkosten_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+				kfzkosten_betrieb_gesamt = kfzkosten_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 	
 	var abschreibung_betrieb_monat = 0;
 	var abschreibung_betrieb_gesamt = 0;
 	for (var i = 0; i < ausgabenkonten.length; ++i ) {
-		if (ausgabenkonten[i]["AusFeld"] == 1130) {
-			abschreibung_betrieb_monat = abschreibung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
-			abschreibung_betrieb_gesamt = abschreibung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		len = abschreibung_konten.length;
+		while (len--) {
+			if (ausgabenkonten[i]["AusFeld"] == abschreibung_konten[len]) {
+				abschreibung_betrieb_monat = abschreibung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+				abschreibung_betrieb_gesamt = abschreibung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 
 	var leistungen_betrieb_monat = 0;
 	var leistungen_betrieb_gesamt = 0;
 	for (var i = 0; i < ausgabenkonten.length; ++i ) {
-		if (ausgabenkonten[i]["AusFeld"] == 1110) {
-			leistungen_betrieb_monat = leistungen_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
-			leistungen_betrieb_gesamt = leistungen_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		len = leistungen_konten.length;
+		while (len--) {
+			if (ausgabenkonten[i]["AusFeld"] == leistungen_konten[len]) {
+				leistungen_betrieb_monat = leistungen_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+				leistungen_betrieb_gesamt = leistungen_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 
 	var steuerberatung_betrieb_monat = 0;
 	var steuerberatung_betrieb_gesamt = 0;
 	for (var i = 0; i < ausgabenkonten.length; ++i ) {
-		if (ausgabenkonten[i]["AusFeld"] == 1194) {
-			steuerberatung_betrieb_monat = steuerberatung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
-			steuerberatung_betrieb_gesamt = steuerberatung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		len = steuerberatung_konten.length;
+		while (len--) {
+			if (ausgabenkonten[i]["AusFeld"] == steuerberatung_konten[len]) {
+				steuerberatung_betrieb_monat = steuerberatung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+				steuerberatung_betrieb_gesamt = steuerberatung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 
 	var abgabenundversicherung_betrieb_monat = 0;
 	var abgabenundversicherung_betrieb_gesamt = 0;
 	for (var i = 0; i < ausgabenkonten.length; ++i ) {
-		if (ausgabenkonten[i]["AusFeld"] == 1223) {
-			abgabenundversicherung_betrieb_monat = abgabenundversicherung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
-			abgabenundversicherung_betrieb_gesamt = abgabenundversicherung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		len = abgabenundversicherung_konten.length;
+		while (len--) {
+			if (ausgabenkonten[i]["AusFeld"] == abgabenundversicherung_konten[len]) {
+				abgabenundversicherung_betrieb_monat = abgabenundversicherung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+				abgabenundversicherung_betrieb_gesamt = abgabenundversicherung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 
 	var geschenkeundbewirtung_betrieb_monat = 0;
 	var geschenkeundbewirtung_betrieb_gesamt = 0;
 	for (var i = 0; i < ausgabenkonten.length; ++i ) {
-		if (ausgabenkonten[i]["AusFeld"] == 1164 || ausgabenkonten[i]["AusFeld"] == 1165 || ausgabenkonten[i]["AusFeld"] == 1174 || ausgabenkonten[i]["AusFeld"] == 1175) {
-			geschenkeundbewirtung_betrieb_monat = geschenkeundbewirtung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
-			geschenkeundbewirtung_betrieb_gesamt = geschenkeundbewirtung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		len = geschenkeundbewirtung_konten.length;
+		while (len--) {
+			if (ausgabenkonten[i]["AusFeld"] == geschenkeundbewirtung_konten[len]) {
+				geschenkeundbewirtung_betrieb_monat = geschenkeundbewirtung_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+				geschenkeundbewirtung_betrieb_gesamt = geschenkeundbewirtung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 
 	var raumundgrundstueck_betrieb_monat = 0;
 	var raumundgrundstueck_betrieb_gesamt = 0;
 	for (var i = 0; i < ausgabenkonten.length; ++i ) {
-		if (ausgabenkonten[i]["AusFeld"] == 1150 || ausgabenkonten[i]["AusFeld"] == 1151 || ausgabenkonten[i]["AusFeld"] == 1152) {
-			raumundgrundstueck_betrieb_monat = raumundgrundstueck_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
-			raumundgrundstueck_betrieb_gesamt = raumundgrundstueck_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		len = raumundgrundstueck_konten.length;
+		while (len--) {
+			if (ausgabenkonten[i]["AusFeld"] == raumundgrundstueck_konten[len]) {
+				raumundgrundstueck_betrieb_monat = raumundgrundstueck_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+				raumundgrundstueck_betrieb_gesamt = raumundgrundstueck_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 
 	var soko_betrieb_monat = 0;
 	var soko_betrieb_gesamt = 0;
 	for (var i = 0; i < ausgabenkonten.length; ++i ) {
-		if (ausgabenkonten[i]["AusFeld"] == 1177 || ausgabenkonten[i]["AusFeld"] == 1168 || ausgabenkonten[i]["AusFeld"] == 1183) {
-			soko_betrieb_monat = soko_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
-			soko_betrieb_gesamt = soko_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		len = soko_konten.length;
+		while (len--) {
+			if (ausgabenkonten[i]["AusFeld"] == soko_konten[len]) {
+				soko_betrieb_monat = soko_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+				soko_betrieb_gesamt = soko_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 	
 	var gesamtkosten_betrieb_monat = 0;
@@ -1238,19 +1459,27 @@ for (var x = 0; x < betriebe.length; ++x ) {
 	var zinsaufwand_betrieb_monat = 0;
 	var zinsaufwand_betrieb_gesamt = 0;
 	for (var i = 0; i < ausgabenkonten.length; ++i ) {
-		if (ausgabenkonten[i]["AusFeld"] == 1232 || ausgabenkonten[i]["AusFeld"] == 1234) {
-			zinsaufwand_betrieb_monat = zinsaufwand_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
-			zinsaufwand_betrieb_gesamt = zinsaufwand_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+		len = zinsaufwand_konten.length;
+		while (len--) {
+			if (ausgabenkonten[i]["AusFeld"] == zinsaufwand_konten[len]) {
+				zinsaufwand_betrieb_monat = zinsaufwand_betrieb_monat + ausgabenkonten[i][betrieb_neumonat];
+				zinsaufwand_betrieb_gesamt = zinsaufwand_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 	
 	var zinsertrag_betrieb_monat = 0;
 	var zinsertrag_betrieb_gesamt = 0;
 	for (var i = 0; i < erloeskonten.length; ++i ) {
-		if (erloeskonten[i]["EinFeld"] == 1102) {
-			zinsertrag_betrieb_monat = zinsertrag_betrieb_monat + erloeskonten[i][betrieb_neumonat];
-			zinsertrag_betrieb_gesamt = zinsertrag_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
+		len = zinsertrag_konten.length;
+		while (len--) {
+			if (erloeskonten[i]["EinFeld"] == zinsertrag_konten[len]) {
+				zinsertrag_betrieb_monat = zinsertrag_betrieb_monat + erloeskonten[i][betrieb_neumonat];
+				zinsertrag_betrieb_gesamt = zinsertrag_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
+			}
 		}
+		delete len;
 	}
 	
 	var vorergebnis_betrieb_monat = 0;
