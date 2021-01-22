@@ -165,6 +165,7 @@ if (myECTdok.Jahr < JahrAktuell) {
 }
 var MonatName = "";
 MonatName = MonatText(MonatAktuell);
+var len; // recyclebare Variable zur temporären Aufnahme von Array-Längen
 
 //************************************** Konten festlegen und Daten Einlesen *************************************************************
 
@@ -222,11 +223,6 @@ if (steuerland == 1) {			//Österreich
 //while (len--) {
 //	document.write('Die länge ist: ' + len + ' Hier wird gesucht: ' + geschenkeundbewirtung_konten[len] + ' Konto gefunden:<br>');
 //}
-//delete len; 
-
-
-
-
 
 // wenn vorhanden, Betriebe einlesen
 if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
@@ -293,7 +289,7 @@ if (myECTeinst.HoleEinstellung("[EinnahmenRechnungsposten]00") != '') {
 //		document.write('' + Erloeskonto + ' <br> Erlöskonten gefunden:<br>');
 		var myErloeskonto = Erloeskonto.split("|");
 		
-		var len = myErloeskonto.length;
+		len = myErloeskonto.length;
 		while (len--) {
 			if (myErloeskonto[len].search(suchmuster_eur) > 1) {
 				my2Erloeskonto = myErloeskonto[len].split("=");
@@ -372,7 +368,7 @@ if (myECTeinst.HoleEinstellung("[AusgabenRechnungsposten]00") != '') {
 		Ausgabenkonto = myECTeinst.HoleEinstellung(ausgabenfeldzuweisungen);
 		var myAusgabenkonto = Ausgabenkonto.split("|");
 
-		var len = myAusgabenkonto.length;
+		len = myAusgabenkonto.length;
 		while (len--) {
 			if (myAusgabenkonto[len].search(suchmuster_eur) > 1) {
 				my2Ausgabenkonto = myAusgabenkonto[len].split("=");
@@ -541,8 +537,7 @@ for (var i = 0; i < erloeskonten.length; ++i ) {
 			umsatzerloes_gesamt = umsatzerloes_gesamt + erloeskonten[i]["Netto_Gesamt"];
 		}
 //		document.write('Die länge ist: ' + len + ' Hier wird gesucht: ' + umsatzerloes_konten[len] + ' Konto gefunden:<br>');
-	}
-	delete len; 
+	} 
 }
 
 var monatleistung = 0;
@@ -555,7 +550,6 @@ for (var i = 0; i < erloeskonten.length; ++i ) {
 			gesamtleistung = gesamtleistung + erloeskonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len; 
 }
 
 var warenek_monat = 0;
@@ -568,7 +562,6 @@ for (var i = 0; i < ausgabenkonten.length; ++i ) {
 			warenek_gesamt = warenek_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len; 
 }
 
 var roh_monat = 0;
@@ -587,7 +580,6 @@ for (var i = 0; i < erloeskonten.length; ++i ) {
 		}
 //		document.write('Die länge ist: ' + len + ' Hier wird gesucht: ' + sonstigeerloes_konten[len] + ' Konto gefunden:<br>');
 	}
-	delete len;
 }
 
 var bet_rohertrag_monat = 0;
@@ -605,7 +597,6 @@ for (var i = 0; i < ausgabenkonten.length; ++i ) {
 			personal_gesamt = personal_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len;
 }
 
 var betsteuern_monat = 0;
@@ -618,7 +609,6 @@ for (var i = 0; i < ausgabenkonten.length; ++i ) {
 			betsteuern_gesamt = betsteuern_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len;
 }
 
 var besondere_monat = 0;
@@ -631,7 +621,6 @@ for (var i = 0; i < ausgabenkonten.length; ++i ) {
 			besondere_gesamt = besondere_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len;
 }
 
 var kfzkosten_monat = 0;
@@ -644,7 +633,6 @@ for (var i = 0; i < ausgabenkonten.length; ++i ) {
 			kfzkosten_gesamt = kfzkosten_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len;
 }
 
 var abschreibung_monat = 0;
@@ -657,7 +645,6 @@ for (var i = 0; i < ausgabenkonten.length; ++i ) {
 			abschreibung_gesamt = abschreibung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len;
 }
 
 var leistungen_monat = 0;
@@ -670,7 +657,6 @@ for (var i = 0; i < ausgabenkonten.length; ++i ) {
 			leistungen_gesamt = leistungen_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len;
 }
 
 var steuerberatung_monat = 0;
@@ -683,7 +669,6 @@ for (var i = 0; i < ausgabenkonten.length; ++i ) {
 			steuerberatung_gesamt = steuerberatung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len;
 }
 
 var abgabenundversicherung_monat = 0;
@@ -696,7 +681,6 @@ for (var i = 0; i < ausgabenkonten.length; ++i ) {
 			abgabenundversicherung_gesamt = abgabenundversicherung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len;
 }
 
 var geschenkeundbewirtung_monat = 0;
@@ -709,7 +693,6 @@ for (var i = 0; i < ausgabenkonten.length; ++i ) {
 			geschenkeundbewirtung_gesamt = geschenkeundbewirtung_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len;
 }
 
 var raumundgrundstueck_monat = 0;
@@ -722,7 +705,6 @@ for (var i = 0; i < ausgabenkonten.length; ++i ) {
 			raumundgrundstueck_gesamt = raumundgrundstueck_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len;
 }
 
 var soko_monat = 0;
@@ -735,7 +717,6 @@ for (var i = 0; i < ausgabenkonten.length; ++i ) {
 			soko_gesamt = soko_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len;
 }
 
 var gesamtkosten_monat = 0;
@@ -758,7 +739,6 @@ for (var i = 0; i < ausgabenkonten.length; ++i ) {
 			zinsaufwand_gesamt = zinsaufwand_gesamt + ausgabenkonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len;
 }
 
 var zinsertrag_monat = 0;
@@ -771,7 +751,6 @@ for (var i = 0; i < erloeskonten.length; ++i ) {
 			zinsertrag_gesamt = zinsertrag_gesamt + erloeskonten[i]["Netto_Gesamt"];
 		}
 	}
-	delete len;
 }
 
 var vorergebnis_monat = 0;
@@ -1206,7 +1185,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				umsatz_betrieb_gesamt = umsatz_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 
 	var gesamt_betrieb_monat = 0;
@@ -1219,7 +1197,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				gesamt_betrieb_gesamt = gesamt_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 
 	var warenek_betrieb_monat = 0;
@@ -1232,7 +1209,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				warenek_betrieb_gesamt = warenek_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 
 	var roh_betrieb_monat = 0;
@@ -1250,7 +1226,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				sonstigeerloes_betrieb_gesamt = sonstigeerloes_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 
 	var bet_rohertrag_betrieb_monat = 0;
@@ -1268,7 +1243,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				personal_betrieb_gesamt = personal_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 	
 	var betsteuern_betrieb_monat = 0;
@@ -1281,7 +1255,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				betsteuern_betrieb_gesamt = betsteuern_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 	
 	var besondere_betrieb_monat = 0;
@@ -1294,7 +1267,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				besondere_betrieb_gesamt = besondere_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 	
 	var kfzkosten_betrieb_monat = 0;
@@ -1307,7 +1279,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				kfzkosten_betrieb_gesamt = kfzkosten_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 	
 	var abschreibung_betrieb_monat = 0;
@@ -1320,7 +1291,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				abschreibung_betrieb_gesamt = abschreibung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 
 	var leistungen_betrieb_monat = 0;
@@ -1333,7 +1303,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				leistungen_betrieb_gesamt = leistungen_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 
 	var steuerberatung_betrieb_monat = 0;
@@ -1346,7 +1315,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				steuerberatung_betrieb_gesamt = steuerberatung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 
 	var abgabenundversicherung_betrieb_monat = 0;
@@ -1359,7 +1327,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				abgabenundversicherung_betrieb_gesamt = abgabenundversicherung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 
 	var geschenkeundbewirtung_betrieb_monat = 0;
@@ -1372,7 +1339,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				geschenkeundbewirtung_betrieb_gesamt = geschenkeundbewirtung_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 
 	var raumundgrundstueck_betrieb_monat = 0;
@@ -1385,7 +1351,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				raumundgrundstueck_betrieb_gesamt = raumundgrundstueck_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 
 	var soko_betrieb_monat = 0;
@@ -1398,7 +1363,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				soko_betrieb_gesamt = soko_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 	
 	var gesamtkosten_betrieb_monat = 0;
@@ -1421,7 +1385,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				zinsaufwand_betrieb_gesamt = zinsaufwand_betrieb_gesamt + ausgabenkonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 	
 	var zinsertrag_betrieb_monat = 0;
@@ -1434,7 +1397,6 @@ for (var x = 0; x < betriebe.length; ++x ) {
 				zinsertrag_betrieb_gesamt = zinsertrag_betrieb_gesamt + erloeskonten[i][betrieb_neugesamt];
 			}
 		}
-		delete len;
 	}
 	
 	var vorergebnis_betrieb_monat = 0;
