@@ -3,7 +3,7 @@
 
 [Setup]
 AppName=ECT BWA Plugin
-AppVerName=ECT BWA Plugin v1.4
+AppVerName=ECT BWA Plugin v1.5
 DiskSpanning=no
 AppPublisher=M. Jahnke / T. Mielke
 AppPublisherURL=http://www.easyct.de
