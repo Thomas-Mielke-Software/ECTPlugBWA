@@ -148,17 +148,17 @@ function MonatText(Zahl) {
 }
 
 var DatumAktuell = new Date();
-var MonatAktuell = DatumAktuell.getMonth();
+var MonatVoreinstellung = DatumAktuell.getMonth();
 var JahrAktuell = DatumAktuell.getYear();
 // Hier wird der Monat bestimmt, der angezeigt werden soll:
 // im Januar = bei Vorjahr Dezember und bei Aktuellem Jahr Januar, im Februar = Januar usw.
 if (dokJahr < JahrAktuell) {
-	MonatAktuell = 12;
-} else if (dokJahr == JahrAktuell && MonatAktuell == 0) {
-	MonatAktuell = 1;
+	MonatVoreinstellung = 12;
+} else if (dokJahr == JahrAktuell && MonatVoreinstellung == 0) {
+	MonatVoreinstellung = 1;
 }
 var MonatName = "";
-MonatName = MonatText(MonatAktuell);
+MonatName = MonatText(MonatVoreinstellung);
 
 
 //************************************** Auswalbereich **************************************
@@ -180,7 +180,24 @@ RenderBWA(MonatName, false);
 
 
 function RenderBWA(MonatName, Selektion) {
-	// © 2022 by Markus Jahnke & Thomas Mielke
+	
+	switch (MonatName)
+	{
+	case "Jan": MonatAktuell = 1; break;
+	case "Feb": MonatAktuell = 2; break;
+	case "M&auml;": MonatAktuell = 3; break;
+	case "Apr": MonatAktuell = 4; break;
+	case "Mai": MonatAktuell = 5; break;
+	case "Jun": MonatAktuell = 6; break;
+	case "Jul": MonatAktuell = 7; break;
+	case "Aug": MonatAktuell = 8; break;
+	case "Sep": MonatAktuell = 9; break;
+	case "Okt": MonatAktuell = 10; break;
+	case "Nov": MonatAktuell = 11; break;
+	case "Dez": MonatAktuell = 12; break;
+	}
+
+	// © 2023 by Markus Jahnke & Thomas Mielke
 
 	InfoText ='EasyCT-BWA Version 1.5\n\n';
 
@@ -1575,7 +1592,10 @@ function RenderBWA(MonatName, Selektion) {
 		// Tabelle
 		// Überschrift + Steuerpflichtiger
 		document.write('<br><table border="0" width="80%" align="center" cellpadding="2" cellspacing="0"><tr>');
-		document.write('<td valign="top" style="font-size: 18px; font-weight: bold; text-decoration: underline;"><a onclick="alert(InfoText)" id="Test" onmouseover="this.innerHTML = \'Bitte hier klicken für wichtige Informationen\'" onmouseout="this.innerHTML=\'Betriebswirtschaftliche Auswertung f&uuml;r das Jahr \'+myECTdok.Jahr ">Betriebswirtschaftliche Auswertung f&uuml;r das Jahr ' + myECTdok.Jahr + '</a></td>');
+		if (!Selektion)
+			document.write('<td valign="top" style="font-size: 18px; font-weight: bold; text-decoration: underline;"><a onclick="alert(InfoText)" id="Test" onmouseover="this.innerHTML = \'Bitte hier klicken für wichtige Informationen\'" onmouseout="this.innerHTML=\'Betriebswirtschaftliche Auswertung f&uuml;r das Jahr \'+ect_year() ">Betriebswirtschaftliche Auswertung f&uuml;r das Jahr ' + '</a></td>');
+		else
+			document.write('<td valign="top" style="font-size: 18px; font-weight: bold; text-decoration: underline;"><a id="Test" ">Betriebswirtschaftliche Auswertung f&uuml;r das Jahr ' + ect_year() + '</a></td>');
 		document.write('<td  align=right rowspan=2 width="20%"><nobr>' + myECTeinst.HoleEinstellung("vorname") + ' ' + myECTeinst.HoleEinstellung("name") + '<br>' + myECTeinst.HoleEinstellung("strasse") + '<br>' + myECTeinst.HoleEinstellung("plz") + ' ' + myECTeinst.HoleEinstellung("ort") + '</nobr></td>');
 		document.write('</tr><tr>');
 		document.write('<td>Betrieb: ' + betriebe[x]["Name"] + '&nbsp;&nbsp;&nbsp;&nbsp;Betriebsteuernummer: ' + betriebe[x]["Betriebssteuernr"] + '</td></tr></table><br>');
