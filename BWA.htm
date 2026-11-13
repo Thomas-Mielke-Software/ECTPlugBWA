@@ -26,7 +26,7 @@ myECTdok = document.createElement("OBJECT");
 myECTdok.classid = "CLSID:ED09076F-B744-47A1-8D60-F9EF093F19F0";
 
 if (window.location.search.charAt(0) == '?') {	// Dokument-ID wurde als Parameter in der URL übergeben
-  dokID = window.location.search.substring(1, window.location.search.length);
+  dokID = window.location.search.substring(1, window.location.search.length).split('&')[0];
   myECTdok.ID = dokID;
 }
 var dokJahr = myECTdok.Jahr;
@@ -121,9 +121,9 @@ function date_month(x) {
 
 // Aktuelles Jahr aud dem EC&T-Dokument zurückgeben, wenn myECTdok-Objekt bereits zerstört ist
 function ect_year() {
-	myECTdok = document.createElement("OBJECT");
-	myECTdok.classid = "CLSID:ED09076F-B744-47A1-8D60-F9EF093F19F0";
-	myECTdok.ID = dokID;
+	// Die ActiveX-Objekte werden nur einmal beim Laden erzeugt und bleiben erhalten (das Dokument wird
+	// nicht mehr neu aufgebaut). Wiederholtes Neuerzeugen hinterlaesst verwaiste OBJECT-Elemente, deren
+	// Freigabe durch die Garbage Collection Wine-Gecko (CrossOver/PortJump unter macOS) abstuerzen laesst.
 	return myECTdok.Jahr;
 }
 
@@ -160,21 +160,38 @@ if (dokJahr < JahrAktuell) {
 var MonatName = "";
 MonatName = MonatText(MonatVoreinstellung);
 
+// Die BWA wird in einen Puffer gerendert und per innerHTML in den Container "BWAInhalt" gesetzt.
+// Beim Monatswechsel bleibt das Dokument (samt <select>) so erhalten. Das fruehere Ueberschreiben
+// per document.write() bzw. Neuladen der Seite bringt Wine-Gecko (CrossOver/PortJump unter macOS)
+// zum Absturz.
+var BWAPuffer = '';
+function ausgabe(s) {
+	BWAPuffer += s;
+}
+
+function WaehleMonat(Monat) {
+	BWAPuffer = '';
+	RenderBWA(MonatText(parseInt(Monat, 10)), false);
+	document.getElementById('BWAInhalt').innerHTML = BWAPuffer;
+}
+
 
 //************************************** Auswalbereich **************************************
 
 document.write('<form name="AuswahlFormular" action="post">');
-document.write('<br><br><center>Auswertungszeitraum: <select name="Monatsauswahl" id="monatSelect" style="font-size: 12px;" onchange="RenderBWA(document.AuswahlFormular.Monatsauswahl.value, true)"></center>');
+document.write('<br><br><center>Auswertungszeitraum: <select name="Monatsauswahl" id="monatSelect" style="font-size: 12px;" onchange="WaehleMonat(this.value)"></center>');
     for(idx=1; idx<ArrayMonatText.length; idx++) {
-      document.write('<option value="' + ArrayMonatText[idx] + '">' + ArrayMonatText[idx] + '</option>');
+      document.write('<option value="' + idx + '"' + (idx == MonatVoreinstellung ? ' selected="selected"' : '') + '>' + ArrayMonatText[idx] + '</option>');
     }
-	document.write('<option selected="selected">'); document.write(MonatName); document.write('</option>');
+	document.write('</select>');
 
 document.write('</form>');
 
 var len; // recyclebare Variable zur temporären Aufnahme von Array-Längen
 
+BWAPuffer = '';
 RenderBWA(MonatName, false);
+document.write('<div id="BWAInhalt">' + BWAPuffer + '</div>');
 
 //************************************** Konten festlegen und Daten Einlesen *************************************************************
 
@@ -199,7 +216,7 @@ function RenderBWA(MonatName, Selektion) {
 
 	// © 2023 by Markus Jahnke & Thomas Mielke
 
-	InfoText ='EasyCT-BWA Version 1.5\n\n';
+	InfoText ='EasyCT-BWA Version 1.7\n\n';
 
 	// Beschreibung
 
@@ -300,13 +317,13 @@ function RenderBWA(MonatName, Selektion) {
 		}
 
 		if (show_betriebe) {
-			document.write('Es wurden ' + betriebe.length + ' Betriebe gefunden:<br>');
+			ausgabe('Es wurden ' + betriebe.length + ' Betriebe gefunden:<br>');
 			for (var i = 0; i < betriebe.length; ++i ) {
-				document.write('<br>');
-				document.write('Betrieb: ' + betriebe[i]["Name"] + '<br>');
-				document.write('Unternehmensart: ' + betriebe[i]["Unternehmensart"] + '<br>');
-				document.write('Rechtsform: ' + betriebe[i]["Rechtsform"] + '<br>');
-				document.write('Betriebssteuernr.: ' + betriebe[i]["Betriebssteuernr"] + '<br>');
+				ausgabe('<br>');
+				ausgabe('Betrieb: ' + betriebe[i]["Name"] + '<br>');
+				ausgabe('Unternehmensart: ' + betriebe[i]["Unternehmensart"] + '<br>');
+				ausgabe('Rechtsform: ' + betriebe[i]["Rechtsform"] + '<br>');
+				ausgabe('Betriebssteuernr.: ' + betriebe[i]["Betriebssteuernr"] + '<br>');
 			}
 		}
 	}
@@ -369,21 +386,21 @@ function RenderBWA(MonatName, Selektion) {
 		}
 
 		if (show_erloeskonten) {
-			document.write('<br><br>Es wurden ' + erloeskonten.length + ' Erlöskonten gefunden:<br>');
+			ausgabe('<br><br>Es wurden ' + erloeskonten.length + ' Erlöskonten gefunden:<br>');
 			for (var i = 0; i < erloeskonten.length; ++i ) {
-				document.write('<br>');
-				document.write('Bezeichnung: ' + erloeskonten[i]["EinRech"] + '<br>');
-				document.write('Feldzuweisung: ' + erloeskonten[i]["EinFeld"] + '<br>');
-				document.write('Netto_Gesamt: ' + erloeskonten[i]["Netto_Gesamt"] + '<br>');
-				document.write('Netto_Monat: ' + erloeskonten[i]["Netto_Monat"] + '<br>');
+				ausgabe('<br>');
+				ausgabe('Bezeichnung: ' + erloeskonten[i]["EinRech"] + '<br>');
+				ausgabe('Feldzuweisung: ' + erloeskonten[i]["EinFeld"] + '<br>');
+				ausgabe('Netto_Gesamt: ' + erloeskonten[i]["Netto_Gesamt"] + '<br>');
+				ausgabe('Netto_Monat: ' + erloeskonten[i]["Netto_Monat"] + '<br>');
 				var neugesamt = '';
 				var neumonat = '';
 				if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
 					for (var x = 0; x < betriebe.length; ++x ) {
 						neugesamt = "Netto_Gesamt_"+betriebe[x]["Name"];
 						neumonat = "Netto_Monat_"+betriebe[x]["Name"];
-						document.write(neugesamt+': ' + erloeskonten[i][neugesamt] + '<br>');
-						document.write(neumonat+': ' + erloeskonten[i][neumonat] + '<br>');
+						ausgabe(neugesamt+': ' + erloeskonten[i][neugesamt] + '<br>');
+						ausgabe(neumonat+': ' + erloeskonten[i][neumonat] + '<br>');
 					}
 				}
 
@@ -446,21 +463,21 @@ function RenderBWA(MonatName, Selektion) {
 		}
 
 		if (show_ausgabenkonten) {
-			document.write('<br><br>Es wurden ' + ausgabenkonten.length + ' Ausgabenkonten gefunden:<br>');
+			ausgabe('<br><br>Es wurden ' + ausgabenkonten.length + ' Ausgabenkonten gefunden:<br>');
 			for (var i = 0; i < ausgabenkonten.length; ++i ) {
-				document.write('<br>');
-				document.write('Bezeichnung: ' + ausgabenkonten[i]["AusRech"] + '<br>');
-				document.write('Feldzuweisung: ' + ausgabenkonten[i]["AusFeld"] + '<br>');
-				document.write('Netto_Gesamt: ' + ausgabenkonten[i]["Netto_Gesamt"] + '<br>');
-				document.write('Netto_Monat: ' + ausgabenkonten[i]["Netto_Monat"] + '<br>');
+				ausgabe('<br>');
+				ausgabe('Bezeichnung: ' + ausgabenkonten[i]["AusRech"] + '<br>');
+				ausgabe('Feldzuweisung: ' + ausgabenkonten[i]["AusFeld"] + '<br>');
+				ausgabe('Netto_Gesamt: ' + ausgabenkonten[i]["Netto_Gesamt"] + '<br>');
+				ausgabe('Netto_Monat: ' + ausgabenkonten[i]["Netto_Monat"] + '<br>');
 				var neugesamt = '';
 				var neumonat = '';
 				if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
 					for (var x = 0; x < betriebe.length; ++x ) {
 						neugesamt = "Netto_Gesamt_"+betriebe[x]["Name"];
 						neumonat = "Netto_Monat_"+betriebe[x]["Name"];
-						document.write(neugesamt+': ' + ausgabenkonten[i][neugesamt] + '<br>');
-						document.write(neumonat+': ' + ausgabenkonten[i][neumonat] + '<br>');
+						ausgabe(neugesamt+': ' + ausgabenkonten[i][neugesamt] + '<br>');
+						ausgabe(neumonat+': ' + ausgabenkonten[i][neumonat] + '<br>');
 					}
 				}
 			}
@@ -542,27 +559,27 @@ function RenderBWA(MonatName, Selektion) {
 	}
 
 	if (show_summe_einnamen) {
-		document.write('<br>Summen Einnamen Netto: <br>');
+		ausgabe('<br>Summen Einnamen Netto: <br>');
 		var eingesamt = 0;
 		for (var i = 0; i < erloeskonten.length; ++i ) {
 			if (erloeskonten[i]["Netto_Gesamt"] != 0) {
 				eingesamt = eingesamt + erloeskonten[i]["Netto_Gesamt"];
-				document.write('Feld: ' + erloeskonten[i]["EinFeld"] + '&nbsp;&nbsp;&nbsp;&nbsp;Summe: ' + currency(erloeskonten[i]["Netto_Gesamt"]) + '<br>');
+				ausgabe('Feld: ' + erloeskonten[i]["EinFeld"] + '&nbsp;&nbsp;&nbsp;&nbsp;Summe: ' + currency(erloeskonten[i]["Netto_Gesamt"]) + '<br>');
 			}
 		}
-		document.write('Einnamen gesamt = ' + currency(eingesamt) + '<br><br>');
+		ausgabe('Einnamen gesamt = ' + currency(eingesamt) + '<br><br>');
 	}
 
 	if (show_summe_ausgaben) {
-		document.write('Summen Ausgaben Netto: <br>');
+		ausgabe('Summen Ausgaben Netto: <br>');
 		var ausgesamt = 0;
 		for (var i = 0; i < ausgabenkonten.length; ++i ) {
 			if (ausgabenkonten[i]["Netto_Gesamt"] != 0) {
 				ausgesamt = ausgesamt + ausgabenkonten[i]["Netto_Gesamt"];
-				document.write('Feld: ' + ausgabenkonten[i]["AusFeld"] + '&nbsp;&nbsp;&nbsp;&nbsp;Summe: ' + currency(ausgabenkonten[i]["Netto_Gesamt"]) + '<br>');
+				ausgabe('Feld: ' + ausgabenkonten[i]["AusFeld"] + '&nbsp;&nbsp;&nbsp;&nbsp;Summe: ' + currency(ausgabenkonten[i]["Netto_Gesamt"]) + '<br>');
 			}
 		}
-		document.write('Ausgaben gesamt = ' + currency(ausgesamt) + '<br><br><br>');
+		ausgabe('Ausgaben gesamt = ' + currency(ausgesamt) + '<br><br><br>');
 	}
 		
 
@@ -917,325 +934,304 @@ function RenderBWA(MonatName, Selektion) {
 	var soko_gesamt_ges_k = (soko_gesamt * gesamtkosten_gesamt_ges_k) / gesamtkosten_gesamt;
 
 	// Überschrift + Steuerpflichtiger
-	document.write('<html><head><style type="text/css">');
-	document.write('{ font-family:verdana, sans-serif; font-size: 14px; font-weight: bold; text-decoration: underline; }');
-	document.write('a { cursor:hand; color: #000099;}');
-	document.write('a:hover {  color: #990000; font-weight: bold; }');
-	document.write('h2 { font-family:verdana, sans-serif; font-size: 12px; font-weight: bold; text-decoration: underline; }');
-	document.write('td { font-family:verdana, sans-serif; font-size: 8px; font-weight: bold; border-color: #000000; border-width: 1px; }');
-	document.write('</style></head>');
-	document.write('<body marginwidth="0" marginheight="0" topmargin="0" bottommargin="0" leftmargin="0" rightmargin="0" bgcolor="#FFFFFF" font color="#000000">');
 
 
-	document.write('<br><table border="0" width="80%" align="center" cellpadding="2" cellspacing="0"><tr>');
-  	// Patch: IE7 zerstört alle Objekte beim Aufbau eines neuen Dokuments, weshalb diese neu erzeugt werden müssen
-  	{
-		myECTdok = document.createElement("OBJECT");
-		myECTdok.classid = "CLSID:ED09076F-B744-47A1-8D60-F9EF093F19F0";
-		myECTdok.ID = dokID;
-		dokJahr = myECTdok.Jahr;
-
-		myECTbuch = document.createElement("OBJECT");
-		myECTbuch.classid = "CLSID:3BC20630-93BA-47B2-82D1-820C7F1986A1";
-
-		myECTeinst = document.createElement("OBJECT");
-		myECTeinst.classid = "CLSID:DFA091A6-D040-444F-800A-656BEA3361C3";
-  	}
+	ausgabe('<br><table border="0" width="80%" align="center" cellpadding="2" cellspacing="0"><tr>');
 	if (!Selektion)
-		document.write('<td valign="top" style="font-size: 18px; font-weight: bold; text-decoration: underline;"><a onclick="alert(InfoText)" id="Test" onmouseover="this.innerHTML = \'Bitte hier klicken für wichtige Informationen\'" onmouseout="this.innerHTML=\'Betriebswirtschaftliche Auswertung f&uuml;r das Jahr \'+ect_year() ">Betriebswirtschaftliche Auswertung f&uuml;r das Jahr ' + '</a></td>');
+		ausgabe('<td valign="top" style="font-size: 18px; font-weight: bold; text-decoration: underline;"><a onclick="alert(InfoText)" id="Test" onmouseover="this.innerHTML = \'Bitte hier klicken für wichtige Informationen\'" onmouseout="this.innerHTML=\'Betriebswirtschaftliche Auswertung f&uuml;r das Jahr \'+ect_year() ">Betriebswirtschaftliche Auswertung f&uuml;r das Jahr ' + '</a></td>');
 	else
-		document.write('<td valign="top" style="font-size: 18px; font-weight: bold; text-decoration: underline;"><a id="Test" ">Betriebswirtschaftliche Auswertung f&uuml;r das Jahr ' + ect_year() + '</a></td>');
+		ausgabe('<td valign="top" style="font-size: 18px; font-weight: bold; text-decoration: underline;"><a id="Test" ">Betriebswirtschaftliche Auswertung f&uuml;r das Jahr ' + ect_year() + '</a></td>');
 
-	document.write('<td  align=right rowspan=2 width="20%"><nobr>' + myECTeinst.HoleEinstellung("vorname") + ' ' + myECTeinst.HoleEinstellung("name") + '<br>' + myECTeinst.HoleEinstellung("strasse") + '<br>' + myECTeinst.HoleEinstellung("plz") + ' ' + myECTeinst.HoleEinstellung("ort") + '</nobr></td>');
-	document.write('</tr><tr>');
-	document.write('<td>Hauptsteuernummer: ' + myECTeinst.HoleEinstellung("fsteuernummer") + '</td></tr></table><br>');
+	ausgabe('<td  align=right rowspan=2 width="20%"><nobr>' + myECTeinst.HoleEinstellung("vorname") + ' ' + myECTeinst.HoleEinstellung("name") + '<br>' + myECTeinst.HoleEinstellung("strasse") + '<br>' + myECTeinst.HoleEinstellung("plz") + ' ' + myECTeinst.HoleEinstellung("ort") + '</nobr></td>');
+	ausgabe('</tr><tr>');
+	ausgabe('<td>Hauptsteuernummer: ' + myECTeinst.HoleEinstellung("fsteuernummer") + '</td></tr></table><br>');
 
 	// Tabelle
-	document.write('<table border="1" width="80%" border-color="#000000" style="table-layout:fixed; background-color: #cccccc; border-width: 1px; border-color: #000000; border-style:solid; border-collapse:collapse; empty-cells:hide;" align=center cellspacing=0 cellpadding=4>');
-	document.write('<tr>');
-	document.write('<td align=left width=350>Bezeichnung</td>');
-	document.write('<td align=right width=100>'+MonatName+'/'+myECTdok.Jahr+'</td>');
-	document.write('<td align=right width=100>% Ges.-<br>Leistg.</td>');
-	document.write('<td align=right width=100>% Ges.-<br>Kosten</td>');
-	document.write('<td align=right width=100>Jan/'+myECTdok.Jahr+' -<br>'+MonatName+'/'+myECTdok.Jahr+'</td>');
-	document.write('<td align=right width=100>% Ges.-<br>Leistg.</td>');
-	document.write('<td align=right width=100>% Ges.-<br>Kosten</td>');
-	document.write('</tr>');
+	ausgabe('<table border="1" width="80%" border-color="#000000" style="table-layout:fixed; background-color: #cccccc; border-width: 1px; border-color: #000000; border-style:solid; border-collapse:collapse; empty-cells:hide;" align=center cellspacing=0 cellpadding=4>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left width=350>Bezeichnung</td>');
+	ausgabe('<td align=right width=100>'+MonatName+'/'+myECTdok.Jahr+'</td>');
+	ausgabe('<td align=right width=100>% Ges.-<br>Leistg.</td>');
+	ausgabe('<td align=right width=100>% Ges.-<br>Kosten</td>');
+	ausgabe('<td align=right width=100>Jan/'+myECTdok.Jahr+' -<br>'+MonatName+'/'+myECTdok.Jahr+'</td>');
+	ausgabe('<td align=right width=100>% Ges.-<br>Leistg.</td>');
+	ausgabe('<td align=right width=100>% Ges.-<br>Kosten</td>');
+	ausgabe('</tr>');
 
 	// Umsatzerloese ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Umsatzerl&ouml;se</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatzerloes_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatzerloes_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatzerloes_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatzerloes_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Umsatzerl&ouml;se</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(umsatzerloes_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(umsatzerloes_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(umsatzerloes_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(umsatzerloes_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	ausgabe('</tr>');
 
 
 	// Gesamtleistung ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Gesamtleistung</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(monatleistung) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(monatleistung_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(monatleistung_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtleistung) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtleistung_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtleistung_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Gesamtleistung</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(monatleistung) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(monatleistung_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(monatleistung_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtleistung) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtleistung_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtleistung_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// Material/Wareneinkauf ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Mat./Wareneinkauf</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Mat./Wareneinkauf</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(warenek_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(warenek_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(warenek_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(warenek_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(warenek_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(warenek_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// Rohertrag ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Rohertrag</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Rohertrag</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(roh_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(roh_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(roh_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(roh_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(roh_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(roh_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// leerzeile einfuegen.
-	document.write('<tr>');
-	document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+	ausgabe('</tr>');
 
 	// Sonstige betriebliche Erlöse ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Sonstige betriebliche Erlöse</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Sonstige betriebliche Erlöse</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// leerzeile einfuegen.
-	document.write('<tr>');
-	document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+	ausgabe('</tr>');
 
 	// Betriebl. Rohertrag ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Betriebl. Rohertrag</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Betriebl. Rohertrag</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// leerzeile einfuegen.
-	document.write('<tr>');
-	document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+	ausgabe('</tr>');
 
 	// Personalkosten ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Personalkosten</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Personalkosten</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(personal_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(personal_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(personal_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(personal_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(personal_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(personal_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// Betriebl. Steuern ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Betriebl. Steuern</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Betriebl. Steuern</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// Telefon Kosten ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Telefon Kosten</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Telefon Kosten</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(besondere_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(besondere_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(besondere_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(besondere_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(besondere_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(besondere_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// Kfz-Kosten (o. St.) ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Kfz-Kosten (o. St.)</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Kfz-Kosten (o. St.)</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// Abschreibung ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Abschreibung</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Abschreibung</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// Bezogene Leistungen ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Bezogene Leistungen</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Bezogene Leistungen</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(leistungen_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(leistungen_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(leistungen_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(leistungen_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(leistungen_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(leistungen_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// Steuerberatung ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Rechts- und Steuerberatung</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Rechts- und Steuerberatung</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// Beiträge, Gebühren, Abgaben und Versicherungen ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Beiträge, Gebühren, Abgaben und Versicherungen</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Beiträge, Gebühren, Abgaben und Versicherungen</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// Geschenke und Bewirtungsaufwendungen ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Geschenke und Bewirtungsaufwendungen</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Geschenke und Bewirtungsaufwendungen</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// Raumkosten und Grundstücksaufwendungen ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Raumkosten und Grundst&uuml;cksaufwendungen</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Raumkosten und Grundst&uuml;cksaufwendungen</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// Sonstige Kosten ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Sonstige Kosten</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Sonstige Kosten</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(soko_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(soko_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(soko_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(soko_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(soko_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(soko_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// Gesamtkosten ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Gesamtkosten</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_monat_ges_k) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_gesamt_ges_k) + '</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Gesamtkosten</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_monat_ges_k) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_gesamt_ges_k) + '</td>');
+	ausgabe('</tr>');
 
 	// leerzeile einfuegen.
-	document.write('<tr>');
-	document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+	ausgabe('</tr>');
 
 	// Betriebsergebnis ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Betriebsergebnis</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Betriebsergebnis</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	ausgabe('</tr>');
 
 	// leerzeile einfuegen.
-	document.write('<tr>');
-	document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+	ausgabe('</tr>');
 
 	// Zinsaufwand ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Zinsaufwand</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Zinsaufwand</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	ausgabe('</tr>');
 
 	// Zinsertrag / Entnahme von Anlagevermögen ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Entnahme von Anlageverm&ouml;gen</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Entnahme von Anlageverm&ouml;gen</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	ausgabe('</tr>');
 
 	// leerzeile einfuegen.
-	document.write('<tr>');
-	document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+	ausgabe('</tr>');
 
 	// Vorläufiges Ergebnis ausrechnen und anzeigen.
-	document.write('<tr>');
-	document.write('<td align=left style="background-color:#ffffff;">Vorl&auml;ufiges Ergebnis</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_monat) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_monat_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_gesamt) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_gesamt_ges_l) + '</td>');
-	document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-	document.write('</tr>');
+	ausgabe('<tr>');
+	ausgabe('<td align=left style="background-color:#ffffff;">Vorl&auml;ufiges Ergebnis</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_monat) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_monat_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_gesamt) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_gesamt_ges_l) + '</td>');
+	ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+	ausgabe('</tr>');
 
-	document.write('</table>');
+	ausgabe('</table>');
 
 	//Hier die Tabelle für die einzelnen Betriebe aufbauen.
 	if (myECTeinst.HoleEinstellung("[Betriebe]Betrieb00Name") != '') {
@@ -1591,301 +1587,299 @@ function RenderBWA(MonatName, Selektion) {
 
 		// Tabelle
 		// Überschrift + Steuerpflichtiger
-		document.write('<br><table border="0" width="80%" align="center" cellpadding="2" cellspacing="0"><tr>');
+		ausgabe('<br><table border="0" width="80%" align="center" cellpadding="2" cellspacing="0"><tr>');
 		if (!Selektion)
-			document.write('<td valign="top" style="font-size: 18px; font-weight: bold; text-decoration: underline;"><a onclick="alert(InfoText)" id="Test" onmouseover="this.innerHTML = \'Bitte hier klicken für wichtige Informationen\'" onmouseout="this.innerHTML=\'Betriebswirtschaftliche Auswertung f&uuml;r das Jahr \'+ect_year() ">Betriebswirtschaftliche Auswertung f&uuml;r das Jahr ' + '</a></td>');
+			ausgabe('<td valign="top" style="font-size: 18px; font-weight: bold; text-decoration: underline;"><a onclick="alert(InfoText)" id="Test" onmouseover="this.innerHTML = \'Bitte hier klicken für wichtige Informationen\'" onmouseout="this.innerHTML=\'Betriebswirtschaftliche Auswertung f&uuml;r das Jahr \'+ect_year() ">Betriebswirtschaftliche Auswertung f&uuml;r das Jahr ' + '</a></td>');
 		else
-			document.write('<td valign="top" style="font-size: 18px; font-weight: bold; text-decoration: underline;"><a id="Test" ">Betriebswirtschaftliche Auswertung f&uuml;r das Jahr ' + ect_year() + '</a></td>');
-		document.write('<td  align=right rowspan=2 width="20%"><nobr>' + myECTeinst.HoleEinstellung("vorname") + ' ' + myECTeinst.HoleEinstellung("name") + '<br>' + myECTeinst.HoleEinstellung("strasse") + '<br>' + myECTeinst.HoleEinstellung("plz") + ' ' + myECTeinst.HoleEinstellung("ort") + '</nobr></td>');
-		document.write('</tr><tr>');
-		document.write('<td>Betrieb: ' + betriebe[x]["Name"] + '&nbsp;&nbsp;&nbsp;&nbsp;Betriebsteuernummer: ' + betriebe[x]["Betriebssteuernr"] + '</td></tr></table><br>');
+			ausgabe('<td valign="top" style="font-size: 18px; font-weight: bold; text-decoration: underline;"><a id="Test" ">Betriebswirtschaftliche Auswertung f&uuml;r das Jahr ' + ect_year() + '</a></td>');
+		ausgabe('<td  align=right rowspan=2 width="20%"><nobr>' + myECTeinst.HoleEinstellung("vorname") + ' ' + myECTeinst.HoleEinstellung("name") + '<br>' + myECTeinst.HoleEinstellung("strasse") + '<br>' + myECTeinst.HoleEinstellung("plz") + ' ' + myECTeinst.HoleEinstellung("ort") + '</nobr></td>');
+		ausgabe('</tr><tr>');
+		ausgabe('<td>Betrieb: ' + betriebe[x]["Name"] + '&nbsp;&nbsp;&nbsp;&nbsp;Betriebsteuernummer: ' + betriebe[x]["Betriebssteuernr"] + '</td></tr></table><br>');
 
-		document.write('<table border="1" width="80%" border-color="#000000" style="table-layout:fixed; background-color: #cccccc; border-width: 1px; border-color: #000000; border-style:solid; border-collapse:collapse; empty-cells:hide;" align=center cellspacing=0 cellpadding=4>');
-		document.write('<tr>');
-		document.write('<td align=left width=350>Bezeichnung</td>');
-		document.write('<td align=right width=100>'+MonatName+'/'+myECTdok.Jahr+'</td>');
-		document.write('<td align=right width=100>% Ges.-<br>Leistg.</td>');
-		document.write('<td align=right width=100>% Ges.-<br>Kosten</td>');
-		document.write('<td align=right width=100>Jan/'+myECTdok.Jahr+' -<br>'+MonatName+'/'+myECTdok.Jahr+'</td>');
-		document.write('<td align=right width=100>% Ges.-<br>Leistg.</td>');
-		document.write('<td align=right width=100>% Ges.-<br>Kosten</td>');
-		document.write('</tr>');
+		ausgabe('<table border="1" width="80%" border-color="#000000" style="table-layout:fixed; background-color: #cccccc; border-width: 1px; border-color: #000000; border-style:solid; border-collapse:collapse; empty-cells:hide;" align=center cellspacing=0 cellpadding=4>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left width=350>Bezeichnung</td>');
+		ausgabe('<td align=right width=100>'+MonatName+'/'+myECTdok.Jahr+'</td>');
+		ausgabe('<td align=right width=100>% Ges.-<br>Leistg.</td>');
+		ausgabe('<td align=right width=100>% Ges.-<br>Kosten</td>');
+		ausgabe('<td align=right width=100>Jan/'+myECTdok.Jahr+' -<br>'+MonatName+'/'+myECTdok.Jahr+'</td>');
+		ausgabe('<td align=right width=100>% Ges.-<br>Leistg.</td>');
+		ausgabe('<td align=right width=100>% Ges.-<br>Kosten</td>');
+		ausgabe('</tr>');
 
 		// Umsatzerloese ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Umsatzerl&ouml;se</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatz_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatz_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatz_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(umsatz_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Umsatzerl&ouml;se</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(umsatz_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(umsatz_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(umsatz_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(umsatz_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+		ausgabe('</tr>');
 
 		// Gesamtleistung Betriebe ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Gesamtleistung</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Gesamtleistung</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamt_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// Material/Wareneinkauf ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Mat./Wareneinkauf</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Mat./Wareneinkauf</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(warenek_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// Rohertrag ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Rohertrag</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Rohertrag</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(roh_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// leerzeile einfuegen.
-		document.write('<tr>');
-		document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+		ausgabe('</tr>');
 
 		// Sonstige betriebliche Erlöse ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Sonstige betriebliche Erlöse</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Sonstige betriebliche Erlöse</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(sonstigeerloes_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// leerzeile einfuegen.
-		document.write('<tr>');
-		document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+		ausgabe('</tr>');
 
 		// Betriebl. Rohertrag ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Betriebl. Rohertrag</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Betriebl. Rohertrag</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(bet_rohertrag_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// leerzeile einfuegen.
-		document.write('<tr>');
-		document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+		ausgabe('</tr>');
 
 		// Personalkosten ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Personalkosten</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Personalkosten</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(personal_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// Betriebl. Steuern ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Betriebl. Steuern</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Betriebl. Steuern</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betsteuern_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// Telefon Kosten ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Telefon Kosten</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Telefon Kosten</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(besondere_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// Kfz-Kosten (o. St.) ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Kfz-Kosten (o. St.)</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Kfz-Kosten (o. St.)</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(kfzkosten_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// Abschreibung ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Abschreibung</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Abschreibung</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abschreibung_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// Bezogene Leistungen ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Bezogene Leistungen</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Bezogene Leistungen</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(leistungen_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// Steuerberatung ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Rechts- und Steuerberatung</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Rechts- und Steuerberatung</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(steuerberatung_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// Beiträge, Gebühren, Abgaben und Versicherungen ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Beiträge, Gebühren, Abgaben und Versicherungen</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Beiträge, Gebühren, Abgaben und Versicherungen</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(abgabenundversicherung_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// Geschenke und Bewirtungsaufwendungen ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Geschenke und Bewirtungsaufwendungen</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Geschenke und Bewirtungsaufwendungen</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(geschenkeundbewirtung_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// Raumkosten und Grundstücksaufwendungen ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Raumkosten und Grundst&uuml;cksaufwendungen</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Raumkosten und Grundst&uuml;cksaufwendungen</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(raumundgrundstueck_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// Sonstige Kosten ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Sonstige Kosten</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Sonstige Kosten</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(soko_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// Gesamtkosten ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Gesamtkosten</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_monat_ges_k) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_gesamt_ges_k) + '</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Gesamtkosten</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_monat_ges_k) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(gesamtkosten_betrieb_gesamt_ges_k) + '</td>');
+		ausgabe('</tr>');
 
 		// leerzeile einfuegen.
-		document.write('<tr>');
-		document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+		ausgabe('</tr>');
 
 		// Betriebsergebnis ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Betriebsergebnis</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Betriebsergebnis</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(betriebsergebnis_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+		ausgabe('</tr>');
 
 		// leerzeile einfuegen.
-		document.write('<tr>');
-		document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+		ausgabe('</tr>');
 
 		// Zinsaufwand ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Zinsaufwand</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Zinsaufwand</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsaufwand_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+		ausgabe('</tr>');
 
 		// Zinsertrag / Entnahme von Anlagevermögen ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Entnahme von Anlageverm&ouml;gen</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Entnahme von Anlageverm&ouml;gen</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(zinsertrag_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+		ausgabe('</tr>');
 
 		// leerzeile einfuegen.
-		document.write('<tr>');
-		document.write('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td colspan=7 style="background-color:#eeeeee;">&nbsp;</td>');
+		ausgabe('</tr>');
 
 		// Vorläufiges Ergebnis ausrechnen und anzeigen.
-		document.write('<tr>');
-		document.write('<td align=left style="background-color:#ffffff;">Vorl&auml;ufiges Ergebnis</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_betrieb_monat) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_betrieb_monat_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_betrieb_gesamt) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_betrieb_gesamt_ges_l) + '</td>');
-		document.write('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
-		document.write('</tr>');
+		ausgabe('<tr>');
+		ausgabe('<td align=left style="background-color:#ffffff;">Vorl&auml;ufiges Ergebnis</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_betrieb_monat) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_betrieb_monat_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_betrieb_gesamt) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">' + currency(vorergebnis_betrieb_gesamt_ges_l) + '</td>');
+		ausgabe('<td align=right style="background-color:#ffffff;">&nbsp;</td>');
+		ausgabe('</tr>');
 
-		document.write('</table>');
-		
-		document.write('</body');
+		ausgabe('</table>');
 		}
 	}
 }

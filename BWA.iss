@@ -1,9 +1,9 @@
-; Dieses Setup-Script wurde mit der Version 2.0.19(b) von Inno Setup erzeugt
+; Dieses Setup-Script läuft mit der Version 6.1 von Inno Setup
 ; --> http://www.innosetup.com
 
 [Setup]
 AppName=ECT BWA Plugin
-AppVerName=ECT BWA Plugin v1.6
+AppVerName=ECT BWA Plugin v1.7
 DiskSpanning=no
 AppPublisher=M. Jahnke / T. Mielke
 AppPublisherURL=http://www.easyct.de
@@ -14,8 +14,11 @@ UsePreviousAppDir=yes
 DefaultGroupName=EasyCash
 OutputBaseFilename=ECTPlugBWA
 OutputDir=.\Setup
-SignTool=winsdk10sha1   ; dual sign the 
-SignTool=winsdk10sha256 ; installer
+; Inno Setup 6 setzt standardmäßig MinVersion=6.1sp1 voraus. Wine/CrossOver (z. B. PortJump unter macOS)
+; meldet Windows 7 teils ohne Service Pack, was zu "benötigt Windows Service Pack 1 oder höher" führt.
+; Wie im Haupt-Setup von EasyCash&Tax (easycash.iss) daher nur Windows 7 ohne SP-Prüfung verlangen.
+MinVersion=6.1
+SignTool=winsdk10sha256
 ;Menu -> Tools -> Configure Sign Tool...
 ;winsdk81sha1: "C:\Program Files (x86)\Windows Kits\8.1\bin\x86\signtool.exe" sign /p mysecretpw /f C:\My\Path\To\cert.p12 /t http://timestamp.comodoca.com $f
 ;winsdk81sha256:  "C:\Program Files (x86)\Windows Kits\8.1\bin\x86\signtool.exe" sign /p mysecretpw /f C:\My\Path\To\cert.p12 /tr http://timestamp.comodoca.com /fd sha256 /td sha256 /as $f
